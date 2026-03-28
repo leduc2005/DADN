@@ -1,97 +1,47 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Mixer System - Mobile Client
 
-# Getting Started
+Ứng dụng di động của hệ thống Mixer System, được phát triển bằng **React Native** và hỗ trợ test nhanh qua **Expo Go**.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+---
 
-## Step 1: Start Metro
+## 🚀 Hướng dẫn khởi chạy nhanh (Quick Start)
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+Dự án đã được cấu hình để chạy trên **Expo SDK 54**, giúp cả nhóm có thể test trực tiếp trên điện thoại (iOS/Android) mà không cần cài đặt Android Studio hay Xcode phức tạp.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+### Bước 1: Cài đặt môi trường
+Đảm bảo bạn đã cài đặt Node.js (phiên bản 18 trở lên). Sau đó chạy lệnh sau để tải các thư viện cần thiết:
+```bash
+npm install --legacy-peer-deps
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+### Bước 2: Cấu hình API (Rất quan trọng)
+Mở file `src/services/api.ts`. Thay đổi biến `LOCAL_IP` thành địa chỉ IP máy tính của bạn:
+```typescript
+const LOCAL_IP = '192.168.1.XX'; // Thay bằng IP của bạn (lấy từ lệnh ipconfig)
 ```
+*Lưu ý: Không commit thay đổi IP cá nhân này lên GitHub.*
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+### Bước 3: Chạy ứng dụng
+Chạy lệnh sau để phát sóng ứng dụng:
+```bash
+npx expo start --tunnel
 ```
+Sau khi mã QR xuất hiện:
+- **Android**: Mở app **Expo Go**, chọn "Scan QR Code".
+- **iOS (iPhone)**: Mở ứng dụng **Camera**, quét mã QR và chọn mở bằng Expo Go.
 
-Then, and every time you update your native dependencies, run:
+---
 
-```sh
-bundle exec pod install
-```
+## 🛠️ Cấu trúc dự án
+- `src/services/api.ts`: Cấu hình kết nối đến Backend.
+- `src/stores/`: Quản lý trạng thái ứng dụng (Zustand).
+- `src/screens/`: Chứa giao diện các màn hình.
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## 📝 Lưu ý cho Team
+- **Backend**: Đảm bảo Server Backend (`/server`) đang chạy đồng thời để App có thể gọi dữ liệu.
+- **Hot Reload**: Khi bạn sửa code và lưu (Ctrl+S), ứng dụng trên điện thoại sẽ tự động cập nhật ngay lập tức.
+- **Lỗi Cache**: Nếu gặp lỗi lạ sau khi kéo code mới, hãy chạy `npx expo start -c --tunnel` để xóa bộ nhớ đệm.
 
-```sh
-# Using npm
-npm run ios
+---
 
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Chúc nhóm hoàn thành đồ án thật tốt! 🚀

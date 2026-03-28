@@ -12,6 +12,9 @@ const db = require('./config/db');
 app.use(cors());
 app.use(express.json()); // Để server hiểu được JSON request
 
+// Khai báo các API Routes
+app.use('/api/auth', require('./routes/authRoutes'));
+
 // Basic Test Route
 app.get('/', (req, res) => {
     res.json({ message: 'Mixer System API is running successfully! 🚀' });
