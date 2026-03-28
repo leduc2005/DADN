@@ -1,4 +1,9 @@
 {
   "name": "client",
-  "displayName": "client"
+  "displayName": "client",
+  "expo": {
+    "name": "MixerSystem",
+    "slug": "mixer-system",
+    "version": "1.0.0"
+  }
 }
