@@ -14,7 +14,7 @@ class Database {
             console.log(`MongoDB connection successful! (Target: ${URI})`);
         })
         .catch(err => {
-            console.error('MongoDB connection error: ', err);
+            console.error('MongoDB connection error (ignored for dev): ', err.message);
         });
     }
 }

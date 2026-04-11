@@ -1,0 +1,451 @@
+Đại học Quốc gia Thành phố Hồ Chí Minh
+Trường Đại học Bách khoa
+Khoa Khoa học và Kỹ thuật máy tính
+
+Đồ Án Đa Ngành
+Báo cáo lần 1
+THIẾT KẾ ỨNG DỤNG MOBILE HỖ TRỢ TÍNH TOÁN
+ĐỘNG CƠ – BỘ TRUYỀN ĐAI – BÁNH RĂNG
+
+Giảng viên:
+
+Th.s Nguyễn Quốc Minh
+Ks Phạm Quốc Hưng
+
+Thành phố Hồ Chí Minh, tháng 3 - 2026
+
+Contents
+1 Giới thiệu
+1.1 Document chi tiết và logic của đề tài . . . . . . . . . . . . . . . . . . . . . . . . .
+1.1.1 Bối cảnh đề tài . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.1.2 Bài toán cần giải quyết . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.1.3 Mục tiêu hệ thống . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.1.4 Đối tượng sử dụng . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.1.5 Phạm vi của hệ thống . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.1.6 Luồng logic nghiệp vụ của đề tài . . . . . . . . . . . . . . . . . . . . . . .
+1.1.7 Nguyên tắc thiết kế phần mềm . . . . . . . . . . . . . . . . . . . . . . . .
+
+2
+2
+2
+2
+3
+3
+3
+4
+4
+
+2 Yêu cầu hệ thống và nền tảng triển khai
+2.1 System Requirement . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.1.1 Yêu cầu chức năng (Functional Requirements) . . . . . . . . . . . . . . .
+2.1.2 Yêu cầu phi chức năng (Non-functional Requirements) . . . . . . . . . . .
+
+5
+5
+5
+6
+
+3 Mô hình hóa hệ thống
+3.1 Tech stack nhóm đã xác định . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.1.1 Tổng quan kiến trúc công nghệ . . . . . . . . . . . . . . . . . . . . . . . .
+3.1.2 Danh sách công nghệ . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.1.3 Lý do lựa chọn tech stack . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.1.4 Ánh xạ tech stack vào các module của đề tài . . . . . . . . . . . . . . . .
+3.2 Kết luận của báo cáo lần 1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+8
+8
+8
+8
+9
+9
+9
+
+1
+
+Chương 1
+
+Giới thiệu
+1.1
+
+Document chi tiết và logic của đề tài
+
+1.1.1
+
+Bối cảnh đề tài
+
+Đề tài gốc từ phía cơ khí hướng tới thiết kế hệ dẫn động thùng trộn với nhiều hạng mục tính
+toán như xác định công suất động cơ, phân phối tỉ số truyền, tính toán bộ truyền, trục, then,
+ổ lăn, nối trục và các chi tiết phụ. Tuy nhiên, trong phạm vi đồ án đa ngành hướng công nghệ
+phần mềm, nhóm thống nhất thu hẹp hệ thống còn 3 module chính để phù hợp với khối lượng
+hiện thực trên mobile app, bao gồm:
+• Module 1: Tính toán và lựa chọn động cơ.
+• Module 2: Tính toán bộ truyền đai dựa trên kết quả từ động cơ.
+• Module 3: Tính toán bánh răng dựa trên các thông số đã có từ hai bước trước.
+Cách thu hẹp này giúp nhóm vẫn giữ được tinh thần liên ngành giữa cơ khí và công nghệ
+phần mềm: phía cơ khí cung cấp nền tảng công thức, ràng buộc kỹ thuật và ngưỡng kiểm tra;
+phía công nghệ phần mềm chịu trách nhiệm chuyển hóa quy trình tính toán thành một hệ thống
+phần mềm có giao diện, dữ liệu, kiểm tra lỗi và lưu trữ lịch sử.
+
+1.1.2
+
+Bài toán cần giải quyết
+
+Trong quá trình làm đồ án hoặc bài tập lớn liên quan đến chi tiết máy, sinh viên thường gặp các
+khó khăn sau:
+• Dữ liệu đầu vào dễ bị nhập sai đơn vị hoặc sai miền giá trị.
+• Quy trình tính toán gồm nhiều bước phụ thuộc tuần tự, dễ nhầm lẫn nếu làm tay.
+• Kết quả của bước sau phụ thuộc trực tiếp vào bước trước, nên khi thay đổi một tham số
+đầu vào phải tính lại toàn bộ.
+• Việc lựa chọn phương án phù hợp (động cơ, bộ truyền, cấu hình bánh răng) tốn thời gian
+nếu không có công cụ hỗ trợ.
+• Người học cần lưu lại các lần tính toán để so sánh phương án và phục vụ báo cáo.
+
+2
+
+Đại học Bách khoa Thành phố Hồ Chí Minh
+Khoa Khoa học và Kỹ thuật máy tính
+
+Vì vậy, nhóm đề xuất xây dựng một ứng dụng mobile giúp chuẩn hóa quy trình nhập liệu,
+kiểm tra tính hợp lệ, tính toán tuần tự theo đúng logic kỹ thuật, lưu lịch sử và hiển thị kết quả
+rõ ràng cho người dùng.
+
+1.1.3
+
+Mục tiêu hệ thống
+
+Mục tiêu tổng quát của hệ thống là xây dựng một ứng dụng mobile hỗ trợ người dùng thực hiện
+chuỗi tính toán sơ bộ trong thiết kế hệ dẫn động cơ khí, tập trung vào ba bước: động cơ, bộ
+truyền đai và bánh răng.
+Mục tiêu cụ thể:
+• Hỗ trợ nhập và kiểm tra dữ liệu đầu vào.
+• Thực hiện tính toán tuần tự theo pipeline kỹ thuật.
+• Giảm sai sót khi người dùng phải tính thủ công.
+• Gợi ý phương án linh kiện phù hợp dựa trên điều kiện bài toán.
+• Lưu lịch sử tính toán để xem lại và so sánh.
+• Tạo nền tảng có thể mở rộng về sau sang các module khác như trục, then, ổ lăn.
+
+1.1.4
+
+Đối tượng sử dụng
+
+• Sinh viên cơ khí cần công cụ hỗ trợ học tập và làm đồ án.
+• Sinh viên khoa học máy tính hiện thực hóa bài toán liên ngành thành ứng dụng mobile.
+• Giảng viên hướng dẫn muốn kiểm tra nhanh luồng xử lý, dữ liệu vào/ra và kết quả tính
+toán.
+
+1.1.5
+
+Phạm vi của hệ thống
+
+Trong phạm vi báo cáo lần 1, nhóm chỉ hiện thực và phân tích 3 module chính:
+1. Tính toán/chọn động cơ.
+2. Tính toán bộ truyền đai.
+3. Tính toán bánh răng.
+Ngoài phạm vi hiện tại:
+• Tính toán trục, then, ổ lăn, nối trục, vỏ máy.
+• Mô phỏng 3D, CAE, kiểm nghiệm bền nâng cao.
+• Tích hợp catalogue thương mại đầy đủ theo hãng thực tế.
+
+Báo cáo Đồ án Tổng hợp - Năm Học: 2025 - 2026
+
+Trang 3/9
+
+Đại học Bách khoa Thành phố Hồ Chí Minh
+Khoa Khoa học và Kỹ thuật máy tính
+
+1.1.6
+
+Luồng logic nghiệp vụ của đề tài
+
+Luồng xử lý của hệ thống được thiết kế theo chuỗi phụ thuộc từ trái sang phải:
+Nhập dữ liệu bài toán → Kiểm tra dữ liệu → Tính toán động cơ →
+Chọn phương án động cơ → Tính toán bộ truyền đai →
+Tính toán bánh răng → Tổng hợp kết quả → Lưu lịch sử / xuất báo cáo
+Giải thích logic:
+• Bước 1 – Nhập dữ liệu: Người dùng nhập các tham số bài toán như công suất yêu cầu,
+số vòng quay, thời gian phục vụ, điều kiện làm việc, các hệ số cần thiết và các ràng buộc
+thiết kế.
+• Bước 2 – Kiểm tra dữ liệu: Hệ thống kiểm tra dữ liệu bắt buộc, kiểu dữ liệu, đơn vị
+và ngưỡng hợp lệ trước khi cho phép tính tiếp.
+• Bước 3 – Tính toán động cơ: Từ dữ liệu đầu bài, hệ thống tính toán hoặc gợi ý động
+cơ phù hợp, sau đó người dùng chọn một phương án.
+• Bước 4 – Tính toán bộ truyền đai: Kết quả từ module động cơ được dùng làm đầu
+vào cho module đai. Người dùng có thể bổ sung các thông số riêng cho bộ truyền đai nếu
+cần.
+• Bước 5 – Tính toán bánh răng: Dựa trên kết quả từ các bước trước, hệ thống tính
+toán các thông số bánh răng và thực hiện các kiểm tra liên quan.
+• Bước 6 – Tổng hợp và lưu trữ: Hệ thống hiển thị toàn bộ kết quả, cho phép lưu lịch
+sử tính toán và xem lại các phương án đã thực hiện.
+
+1.1.7
+
+Nguyên tắc thiết kế phần mềm
+
+Để phù hợp với đặc thù một ứng dụng kỹ thuật có nhiều công thức và kiểm tra ràng buộc, nhóm
+định hướng hệ thống theo các nguyên tắc sau:
+• Tách biệt giữa giao diện, logic nghiệp vụ và lớp dữ liệu.
+• Mỗi module tính toán là một khối độc lập tương đối, nhưng có phụ thuộc dữ liệu rõ ràng.
+• Dễ mở rộng thêm chương mới từ tài liệu cơ khí trong các giai đoạn tiếp theo.
+• Tối ưu cho việc kiểm thử công thức và so sánh kết quả.
+• Hạn chế đưa quá nhiều logic kỹ thuật vào giao diện người dùng.
+
+Báo cáo Đồ án Tổng hợp - Năm Học: 2025 - 2026
+
+Trang 4/9
+
+Chương 2
+
+Yêu cầu hệ thống và nền tảng
+triển khai
+2.1
+
+System Requirement
+
+2.1.1
+
+Yêu cầu chức năng (Functional Requirements)
+
+1. FR-01: Quản lý tài khoản người dùng
+Hệ thống cho phép người dùng đăng ký, đăng nhập và đăng xuất tài khoản để quản lý dữ
+liệu cá nhân và lịch sử tính toán.
+2. FR-02: Tạo bài toán mới
+Người dùng có thể tạo một bài toán mới, đặt tên phương án và bắt đầu nhập dữ liệu đầu
+vào.
+3. FR-03: Nhập dữ liệu đầu vào
+Hệ thống cho phép người dùng nhập các tham số của bài toán như công suất, số vòng quay,
+thời gian phục vụ, điều kiện vận hành và các hệ số liên quan.
+4. FR-04: Kiểm tra hợp lệ dữ liệu
+Hệ thống kiểm tra dữ liệu bắt buộc, kiểu dữ liệu, miền giá trị, ngưỡng hợp lệ và phát hiện
+các đầu vào mâu thuẫn logic. Nếu dữ liệu không hợp lệ, hệ thống phải chặn tính toán và
+hiển thị lỗi cụ thể.
+5. FR-05: Tính toán động cơ
+Hệ thống thực hiện tính toán hoặc gợi ý phương án động cơ dựa trên dữ liệu đầu vào. Kết
+quả hiển thị bao gồm các thông số chính và danh sách phương án để người dùng lựa chọn.
+6. FR-06: Chọn phương án động cơ
+Người dùng có thể chọn một phương án động cơ để sử dụng cho các bước tính tiếp theo.
+7. FR-07: Tính toán bộ truyền đai
+Sau khi động cơ đã được chọn, hệ thống dùng kết quả động cơ làm đầu vào cho bước tính
+toán bộ truyền đai và trả về các thông số tương ứng.
+8. FR-08: Tính toán bánh răng
+Sau khi hoàn tất bước đai, hệ thống tiếp tục tính toán các thông số bánh răng dựa trên
+dữ liệu đã tích lũy từ hai bước trước.
+5
+
+Đại học Bách khoa Thành phố Hồ Chí Minh
+Khoa Khoa học và Kỹ thuật máy tính
+
+9. FR-09: Cơ chế phụ thuộc tuần tự giữa các module
+Hệ thống không cho phép người dùng tính toán module sau khi module trước chưa hoàn
+tất. Khi dữ liệu ở module trước thay đổi, các kết quả ở module sau phải được đánh dấu
+cần tính lại.
+10. FR-10: Hiển thị kết quả tổng hợp
+Hệ thống hiển thị toàn bộ dữ liệu đầu vào, các kết quả trung gian và kết quả cuối trên một
+màn hình tổng hợp để người dùng dễ theo dõi.
+11. FR-11: Lưu lịch sử tính toán
+Hệ thống cho phép lưu mỗi lần tính toán dưới dạng một bản ghi lịch sử gắn với người dùng
+và thời gian thực hiện.
+12. FR-12: Xem lịch sử tính toán
+Người dùng có thể xem danh sách các lần tính toán trước đây, mở lại chi tiết từng bản ghi.
+13. FR-13: Lọc và tìm kiếm lịch sử
+Hệ thống hỗ trợ tìm kiếm theo tên bài toán, thời gian hoặc trạng thái để người dùng truy
+xuất lịch sử nhanh hơn.
+14. FR-14: Xóa bản ghi lịch sử
+Người dùng có thể xóa một bản ghi lịch sử do chính họ tạo ra.
+15. FR-15: Gợi ý phương án linh kiện
+Hệ thống hỗ trợ gợi ý phương án phù hợp cho từng bước dựa trên tập luật hoặc dữ liệu
+catalogue nội bộ.
+16. FR-16: Xuất báo cáo
+Hệ thống cho phép người dùng xuất báo cáo kết quả dưới dạng PDF hoặc dạng chia sẻ để
+phục vụ nộp bài và demo.
+
+2.1.2
+
+Yêu cầu phi chức năng (Non-functional Requirements)
+
+1. NFR-01: Hiệu năng phản hồi
+Các thao tác chuyển màn hình chính phải phản hồi trong thời gian chấp nhận được. Kết
+quả tính toán cho một bộ dữ liệu chuẩn nên được trả về trong vòng dưới 3 giây ở điều kiện
+mạng ổn định.
+2. NFR-02: Tính dễ sử dụng
+Hệ thống sử dụng tiếng Việt, giao diện đơn giản, trực quan, giúp người dùng hoàn thành
+tác vụ chính với số bước thao tác ngắn và thông báo lỗi dễ hiểu.
+3. NFR-03: Tính đúng đắn của dữ liệu
+Dữ liệu đầu vào và kết quả tính toán phải được kiểm tra nhất quán, tránh sinh ra kết quả
+khi điều kiện tiền đề chưa đạt.
+4. NFR-04: Tính tin cậy
+Hệ thống phải lưu được trạng thái tính toán và lịch sử người dùng, tránh mất dữ liệu khi
+người dùng thoát ứng dụng hoặc kết nối mạng tạm thời gián đoạn.
+5. NFR-05: Bảo mật
+Thông tin đăng nhập và dữ liệu nhạy cảm phải được truyền qua kết nối an toàn; mật khẩu
+không được lưu dưới dạng plain text; hệ thống sử dụng cơ chế xác thực bằng token.
+
+Báo cáo Đồ án Tổng hợp - Năm Học: 2025 - 2026
+
+Trang 6/9
+
+Đại học Bách khoa Thành phố Hồ Chí Minh
+Khoa Khoa học và Kỹ thuật máy tính
+
+6. NFR-06: Khả năng mở rộng
+Kiến trúc phải hỗ trợ việc bổ sung các module cơ khí mới trong tương lai như trục, then, ổ
+lăn hoặc các tính năng recommendation nâng cao mà không cần viết lại toàn bộ hệ thống.
+7. NFR-07: Khả năng bảo trì
+Mã nguồn phải được tổ chức theo module, có sự tách biệt rõ giữa frontend, backend,
+business logic và data access để thuận tiện sửa lỗi và mở rộng.
+8. NFR-08: Tính tương thích
+Ứng dụng mobile cần hoạt động ổn định trên Android; giao diện phải thích ứng được với
+nhiều kích thước màn hình điện thoại thông dụng.
+9. NFR-09: Khả năng kiểm thử
+Hệ thống phải hỗ trợ kiểm thử ở các lớp chính gồm API, hàm tính toán và giao diện, nhằm
+đảm bảo tính đúng đắn của công thức và tính ổn định của phần mềm.
+10. NFR-10: Tính trực quan
+Các kết quả cần được trình bày rõ ràng, có phân tách theo module, dễ đọc và hỗ trợ người
+dùng so sánh phương án giữa các lần tính toán.
+
+Báo cáo Đồ án Tổng hợp - Năm Học: 2025 - 2026
+
+Trang 7/9
+
+Chương 3
+
+Mô hình hóa hệ thống
+3.1
+
+Tech stack nhóm đã xác định
+
+3.1.1
+
+Tổng quan kiến trúc công nghệ
+
+Nhóm lựa chọn kiến trúc client-server gồm một ứng dụng mobile ở phía người dùng và một
+backend API ở phía máy chủ. Dữ liệu được lưu trữ trên MongoDB. Phần thiết kế giao diện được
+thực hiện trên Figma trước khi hiện thực bằng React Native.
+Figma (UI/UX) → React Native App (Client) ↔ Node.js/Express API ↔ MongoDB
+
+3.1.2
+
+Danh sách công nghệ
+
+Tầng
+UI/UX Design
+
+Công nghệ
+Figma
+
+Mobile Frontend
+Navigation
+
+React
+Native
+JavaScript
+React Navigation
+
+State Management
+
+Zustand / Context API
+
+API Communication
+Backend
+
+Axios
+Node.js + Express.js
+
+Database
+
+MongoDB + Mongoose
+
+Authentication
+
+JWT
+
+Testing
+
+Jest / Postman
+
+Version Control
+
+GitHub
+
++
+
+8
+
+Mục đích sử dụng
+Thiết kế wireframe, mockup, prototype và
+handoff cho frontend
+Xây dựng ứng dụng mobile đa nền tảng, giao
+diện người dùng và luồng tương tác
+Điều hướng giữa các màn hình như Login,
+Home, Input, Motor, Belt, Gear, History
+Quản lý trạng thái cục bộ của form nhập liệu,
+phiên làm việc và kết quả tạm thời
+Gửi request từ mobile app đến backend API
+Xây dựng REST API, xác thực người dùng,
+xử lý logic hệ thống và điều phối dữ liệu
+Lưu tài khoản, bài toán, kết quả tính toán,
+lịch sử và dữ liệu cấu hình
+Xác thực người dùng và phân quyền truy cập
+dữ liệu cá nhân
+Kiểm thử hàm xử lý, API và kiểm tra luồng
+request-response
+Quản lý mã nguồn, phân nhánh chức năng và
+hỗ trợ làm việc nhóm
+
+Đại học Bách khoa Thành phố Hồ Chí Minh
+Khoa Khoa học và Kỹ thuật máy tính
+
+Deployment
+
+3.1.3
+
+Render / Railway / VPS
+
+Triển khai backend API để ứng dụng mobile
+có thể kết nối khi demo
+
+Lý do lựa chọn tech stack
+
+• React Native + JavaScript: Phù hợp cho nhóm muốn phát triển app mobile nhanh, tái
+sử dụng kiến thức JavaScript và dễ tích hợp với backend Node.js.
+• Node.js + Express: Đơn giản, phổ biến, phù hợp để xây dựng REST API cho một đồ
+án có nhiều thao tác CRUD, authentication và lưu lịch sử.
+• MongoDB: Phù hợp với dữ liệu dạng document như project, snapshots kết quả, lịch sử
+tính toán và cấu hình các phương án.
+• Figma: Giúp chuẩn hóa UI/UX trước khi code, hỗ trợ cộng tác nhóm hiệu quả.
+• JWT: Thích hợp cho mô hình xác thực stateless giữa mobile app và backend.
+
+3.1.4
+
+Ánh xạ tech stack vào các module của đề tài
+
+• Module giao diện người dùng: React Native, React Navigation, Figma.
+• Module nhập liệu và validation: React Native form components, kiểm tra dữ liệu phía
+client kết hợp validation phía server.
+• Module tính toán động cơ, đai, bánh răng: triển khai chủ yếu ở backend Node.js/Express
+để dễ bảo trì và kiểm thử.
+• Module lịch sử tính toán: MongoDB lưu theo user và project, backend cung cấp API
+đọc/ghi/xóa.
+• Module xác thực: JWT, middleware Express, mã hóa mật khẩu.
+
+3.2
+
+Kết luận của báo cáo lần 1
+
+Báo cáo lần 1 xác định rõ hướng đi của đề tài dưới góc nhìn công nghệ phần mềm: nhóm không
+cố hiện thực toàn bộ bài toán cơ khí gốc, mà tập trung vào một lõi nghiệp vụ rõ ràng gồm 3
+module tính toán chính là động cơ, bộ truyền đai và bánh răng. Từ đó, nhóm đã xác định được
+phạm vi, logic xử lý, các yêu cầu chức năng/phi chức năng và bộ công nghệ sử dụng để hiện thực
+hệ thống.
+Trong giai đoạn tiếp theo, nhóm sẽ tiếp tục hoàn thiện:
+• Use-case và đặc tả use-case chi tiết.
+• Thiết kế UI/UX trên Figma.
+• Thiết kế cơ sở dữ liệu MongoDB.
+• Hiện thực frontend React Native và backend Express.
+• Xây dựng bộ API cho ba module tính toán và lịch sử.
+
+Báo cáo Đồ án Tổng hợp - Năm Học: 2025 - 2026
+
+Trang 9/9
+
+
