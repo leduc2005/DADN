@@ -18,7 +18,7 @@ export default function LoginScreen({ navigation }: any) {
       const { token, user } = response.data;
       setAuthToken(token); // Gắn token vào mọi Request API sau này
       login(user, token);  // Lưu vào kho Zustand State
-      Alert.alert('Thành công', 'Đăng nhập thành công!');
+      navigation.navigate('InputScreen'); // ✅ Chuyển sang Module 1
     } catch (error: any) {
       Alert.alert('Đăng nhập thất bại', error.response?.data?.message || 'Máy chủ không phản hồi');
     }
