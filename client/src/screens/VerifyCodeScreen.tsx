@@ -1,19 +1,36 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { ArrowLeft, ShieldCheck } from 'lucide-react-native';
+import { api } from '../services/api';
 
 export default function VerifyCodeScreen({ navigation, route }: any) {
   const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
   const email = route.params?.email || '';
 
-  const handleVerify = () => {
-    // API Check Mã OTP sẽ làm ở đây
-    if (code === '123456') { // Mock tempCode theo cái backend viết lúc nãy
-       navigation.navigate('ResetPassword', { email });
-    } else {
-       Alert.alert('Lỗi', 'Mã OTP không hợp lệ! (Thử gõ 123456 xem sao)');
+  const handleVerify = async () => {
+    if (code.length !== 6) return Alert.alert('Lỗi', 'Vui lòng nhập đủ 6 chữ số');
+    setLoading(true);
+    try {
+      // ✅ Gọi API thật — server kiểm tra OTP với DB có thời hạn 10 phút
+      await api.post('/auth/verify-code', { email, code });
+      navigation.navigate('ResetPassword', { email });
+    } catch (error: any) {
+      Alert.alert('Lỗi', error.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn');
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleResend = async () => {
+    try {
+      await api.post('/auth/forgot-password', { email });
+      Alert.alert('Đã gửi lại', 'Mã OTP mới đã được gửi đến email của bạn!');
+    } catch {
+      Alert.alert('Lỗi', 'Không thể gửi lại mã. Thử lại sau.');
+    }
+  };
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -41,10 +58,10 @@ export default function VerifyCodeScreen({ navigation, route }: any) {
             />
             <View style={styles.resendContainer}>
                 <Text style={styles.resendText}>Didn't receive code? </Text>
-                <TouchableOpacity><Text style={styles.resendLink}>Resend</Text></TouchableOpacity>
+                <TouchableOpacity onPress={handleResend}><Text style={styles.resendLink}>Resend</Text></TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.actionButton} onPress={handleVerify}>
-              <Text style={styles.actionButtonText}>Verify</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={handleVerify} disabled={loading}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.actionButtonText}>Verify</Text>}
             </TouchableOpacity>
           </View>
         </ScrollView>
