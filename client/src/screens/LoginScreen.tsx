@@ -4,6 +4,7 @@ import { Settings, Eye, EyeOff } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import { api, setAuthToken } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { saveAuthToSecureStore } from '../hooks/useAuthBootstrap';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -16,13 +17,15 @@ export default function LoginScreen({ navigation }: any) {
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
-      setAuthToken(token); // Gắn token vào mọi Request API sau này
-      login(user, token);  // Lưu vào kho Zustand State
-      navigation.navigate('InputScreen'); // ✅ Chuyển sang Module 1
+      setAuthToken(token);                        // Gắn token vào Axios header
+      login(user, token);                         // Lưu vào Zustand (RAM)
+      await saveAuthToSecureStore(token, user);   // ✅ Lưu vào SecureStore (bộ nhớ bảo mật)
+      navigation.navigate('HomeScreen');          // Chuyển sang Màn hình chính
     } catch (error: any) {
       Alert.alert('Đăng nhập thất bại', error.response?.data?.message || 'Máy chủ không phản hồi');
     }
   };
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
