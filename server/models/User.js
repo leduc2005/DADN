@@ -20,7 +20,17 @@ const UserSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    // Lưu OTP quên mật khẩu tạm thời (hết hạn sau 10 phút)
+    resetCode: {
+        type: String,
+        default: null
+    },
+    resetCodeExpiry: {
+        type: Date,
+        default: null
     }
+
 });
 
 module.exports = mongoose.model('User', UserSchema);
