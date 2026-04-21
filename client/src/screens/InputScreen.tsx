@@ -11,7 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { ChevronLeft, Info, AlertTriangle, XCircle } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowLeft, Info, AlertTriangle, XCircle } from 'lucide-react-native';
 import {
   BearingType,
   DriveType,
@@ -295,7 +296,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
       setErrorMessage(physicalResult.message ?? 'Dữ liệu chưa hợp lệ');
       setErrorSuggestion(
         physicalResult.suggestion ??
-          'Vui lòng kiểm tra lại dữ liệu trước khi tính toán.',
+        'Vui lòng kiểm tra lại dữ liệu trước khi tính toán.',
       );
       setShowErrorModal(true);
       return;
@@ -498,13 +499,13 @@ export default function InputScreen({ navigation }: InputScreenProps) {
   ];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.navigate('Home')}
+          onPress={() => navigation.navigate('HomeScreen')}
           style={styles.backButton}
         >
-          <ChevronLeft size={24} color="#374151" />
+          <ArrowLeft size={24} color="#374151" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Thông số đầu vào</Text>
       </View>
@@ -696,9 +697,9 @@ export default function InputScreen({ navigation }: InputScreenProps) {
               const statusOptions = forceOpen
                 ? [{ label: 'Hở (true)', value: 'true' }]
                 : [
-                    { label: 'Hở (true)', value: 'true' },
-                    { label: 'Không hở (false)', value: 'false' },
-                  ];
+                  { label: 'Hở (true)', value: 'true' },
+                  { label: 'Không hở (false)', value: 'false' },
+                ];
               return (
                 <View key={item.id} style={styles.dynamicItemCard}>
                   <View style={styles.dynamicItemHeader}>
@@ -836,13 +837,11 @@ export default function InputScreen({ navigation }: InputScreenProps) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
       <View style={styles.footer}>
         <TouchableOpacity style={styles.submitButton} onPress={validateAndCalculate}>
           <Text style={styles.submitButtonText}>Calculate Requirement</Text>
         </TouchableOpacity>
       </View>
-
       <Modal visible={showErrorModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -888,7 +887,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
