@@ -10,6 +10,7 @@ import HomeScreen from '../screens/HomeScreen';
 import InputScreen from '../screens/InputScreen';
 import MotorSelectionScreen from '../screens/MotorSelectionScreen';
 
+
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
@@ -24,6 +25,7 @@ export default function AppNavigator() {
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="VerifyCode" component={VerifyCodeScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+        <Stack.Screen name="InputScreen" component={InputScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

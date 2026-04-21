@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { api } from '../services/api';
+import { api } from '../services/request';
 
 export default function ResetPasswordScreen({ navigation, route }: any) {
   const [password, setPassword] = useState('');

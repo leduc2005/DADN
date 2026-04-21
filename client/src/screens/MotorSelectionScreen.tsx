@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { calc_motor } from '../logic/calc_motor';
+import { searchMotor } from '../services/motor';
 
 interface Motor {
-    id: number;
-    model: string;
-    power: number;
-    speed: number;
-    torqueRatio: number;
+    motorId: string;
+    motorType: string;
+    ratedPower: number;
+    motorSpeed: number;
+    syncSpeed: number;
 }
 
 interface MotorSelectionScreenProps {
@@ -16,7 +18,6 @@ interface MotorSelectionScreenProps {
 
 export default function MotorSelectionScreen({ navigation, route }: MotorSelectionScreenProps) {
     const state = route?.params || {};
-    console.log('MotorSelectionScreen received state:', state);
     const {
         inputData,
     } = state;
@@ -28,42 +29,42 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
     const bearingItem = itemData?.bearingItem || [];
 
     const [selectedMotor, setSelectedMotor] = useState<Motor | null>(null);
+    const [motors, setMotors] = useState<Motor[]>([]);
+    const [loadingMotors, setLoadingMotors] = useState(false);
+    const [motorError, setMotorError] = useState<string | null>(null);
 
-    const { systemEta, Pct, Ndb } = useMemo(() => {
-        const inputPower = Number(operatingData?.power);
-        const inputSpeed = Number(operatingData?.speed);
+    const { systemEta, Pct, Ndb } = useMemo(
+        () => calc_motor({
+            power: operatingData?.power,
+            speed: operatingData?.speed,
+            driveItem,
+        }),
+        [operatingData?.power, operatingData?.speed, driveItem],
+    );
 
-        const etaProduct = Array.isArray(driveItem) && driveItem.length > 0
-            ? driveItem.reduce((acc: number, item: any) => {
-                const eta = Number(item?.eta);
-                return eta > 0 ? acc * eta : acc;
-            }, 1)
-            : 1;
+    useEffect(() => {
+        const loadMotors = async () => {
+            if (!Pct || !Ndb) {
+                setMotors([]);
+                return;
+            }
 
-        const ratioProduct = Array.isArray(driveItem) && driveItem.length > 0
-            ? driveItem.reduce((acc: number, item: any) => {
-                const ratio = Number(item?.transmissionRatio);
-                return ratio > 0 ? acc * ratio : acc;
-            }, 1)
-            : 1;
+            setLoadingMotors(true);
+            setMotorError(null);
 
-        const calculatedPct = inputPower > 0 && etaProduct > 0 ? inputPower / etaProduct : 0;
-        const calculatedNdb = inputSpeed > 0 ? inputSpeed * ratioProduct : 0;
-
-        return {
-            systemEta: etaProduct,
-            Pct: calculatedPct,
-            Ndb: calculatedNdb,
+            try {
+                const response = await searchMotor({ Pct, Nsb: Ndb });
+                setMotors(Array.isArray(response?.items) ? response.items : []);
+            } catch (error) {
+                setMotorError('Không thể tải danh sách motor.');
+                setMotors([]);
+            } finally {
+                setLoadingMotors(false);
+            }
         };
-    }, [operatingData?.power, operatingData?.speed, driveItem]);
 
-
-    const motors: Motor[] = [
-        { id: 1, model: '4A112M2Y3', power: 7.5, speed: 2922, torqueRatio: 2.2 },
-        { id: 2, model: '4A132S4Y3', power: 7.5, speed: 1440, torqueRatio: 1.8 },
-        { id: 3, model: '4A100L2Y3', power: 5.5, speed: 2880, torqueRatio: 2.5 },
-        { id: 4, model: '4A132M4Y3', power: 11, speed: 1460, torqueRatio: 1.5 },
-    ];
+        loadMotors();
+    }, [Pct, Ndb]);
 
     const navigate = (screen: string, params?: any) => {
         if (screen === 'kinematic-results') navigation.navigate('KinematicResults', params);
@@ -159,20 +160,26 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
             </View>
 
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
+                {loadingMotors ? (
+                    <Text style={styles.statusText}>Đang tải danh sách motor...</Text>
+                ) : motorError ? (
+                    <Text style={styles.errorText}>{motorError}</Text>
+                ) : null}
+
                 <View style={styles.motorList}>
                     {motors.map((motor) => {
-                        const isSelected = selectedMotor?.id === motor.id;
+                        const isSelected = selectedMotor?.motorId === motor.motorId;
 
                         return (
                             <View
-                                key={motor.id}
+                                key={motor.motorId}
                                 style={[
                                     styles.motorCard,
                                     isSelected ? styles.motorCardSelected : styles.motorCardDefault,
                                 ]}
                             >
                                 <View style={styles.motorCardHeader}>
-                                    <Text style={styles.motorTitle}>Model: {motor.model}</Text>
+                                    <Text style={styles.motorTitle}>Model: {motor.motorId}</Text>
                                     <TouchableOpacity
                                         onPress={() => handleSelectMotor(motor)}
                                         style={[
@@ -186,23 +193,27 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
                                                 isSelected ? styles.selectButtonTextSelected : styles.selectButtonTextDefault,
                                             ]}
                                         >
-                                            {isSelected ? 'Selected' : 'Select'}
+                                            {isSelected ? 'Đã chọn' : 'Chọn'}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
 
                                 <View style={styles.specList}>
                                     <View style={styles.specRow}>
-                                        <Text style={styles.specLabel}>Power:</Text>
-                                        <Text style={styles.specValue}>{motor.power} kW</Text>
+                                        <Text style={styles.specLabel}>Loại động cơ:</Text>
+                                        <Text style={styles.specValue}>{motor.motorType}</Text>
                                     </View>
                                     <View style={styles.specRow}>
-                                        <Text style={styles.specLabel}>Speed:</Text>
-                                        <Text style={styles.specValue}>{motor.speed} rpm</Text>
+                                        <Text style={styles.specLabel}>Công suất động cơ:</Text>
+                                        <Text style={styles.specValue}>{motor.ratedPower} kW</Text>
                                     </View>
                                     <View style={styles.specRow}>
-                                        <Text style={styles.specLabel}>Torque Ratio:</Text>
-                                        <Text style={styles.specValue}>{motor.torqueRatio}</Text>
+                                        <Text style={styles.specLabel}>Số vòng /phút:</Text>
+                                        <Text style={styles.specValue}>{motor.motorSpeed} rpm</Text>
+                                    </View>
+                                    <View style={styles.specRow}>
+                                        <Text style={styles.specLabel}>Số vòng đồng bộ:</Text>
+                                        <Text style={styles.specValue}>{motor.syncSpeed} rpm</Text>
                                     </View>
                                 </View>
                             </View>
@@ -217,9 +228,9 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
                         onPress={() => {
                             navigate('kinematic-results', {
                                 ...state,
-                                motorModel: selectedMotor.model,
-                                nDc: selectedMotor.speed,
-                                motorPower: selectedMotor.power,
+                                motorModel: selectedMotor.motorId,
+                                nDc: selectedMotor.motorSpeed,
+                                motorPower: selectedMotor.ratedPower,
                                 Pct,
                                 Ndb,
                                 systemEta,
@@ -309,6 +320,8 @@ const styles = StyleSheet.create({
     stepDivider: { flex: 1, height: 2, backgroundColor: '#e5e7eb', marginHorizontal: 8 },
     scrollView: { flex: 1 },
     scrollContent: { padding: 24, paddingBottom: 24 },
+    statusText: { marginBottom: 12, fontSize: 14, color: '#2563eb', fontWeight: '600' },
+    errorText: { marginBottom: 12, fontSize: 14, color: '#dc2626', fontWeight: '600' },
     motorList: { gap: 12 },
     motorCard: {
         borderRadius: 16,
@@ -340,9 +353,9 @@ const styles = StyleSheet.create({
     selectButtonTextDefault: { color: '#2563eb' },
     selectButtonTextSelected: { color: '#fff' },
     specList: { gap: 8 },
-    specRow: { flexDirection: 'row', alignItems: 'center' },
-    specLabel: { width: 110, color: '#6b7280', fontSize: 14 },
-    specValue: { fontSize: 14, fontWeight: '600', color: '#111827' },
+    specRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    specLabel: { flex: 1, paddingRight: 16, color: '#6b7280', fontSize: 14 },
+    specValue: { flex: 1, textAlign: 'right', fontSize: 14, fontWeight: '600', color: '#111827' },
     footer: {
         backgroundColor: '#fff',
         borderTopWidth: 1,

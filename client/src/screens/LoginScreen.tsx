@@ -3,8 +3,9 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Settings, Eye, EyeOff } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
-import { api, setAuthToken } from '../services/api';
+import { setAuthToken } from '../services/auth';
 import { useAuthStore } from '../store/authStore';
+import { api } from '../services/request'
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -15,12 +16,11 @@ export default function LoginScreen({ navigation }: any) {
   const handleLogin = async () => {
     if (!email || !password) return Alert.alert('Lỗi', 'Vui lòng nhập Email và Mật khẩu');
     try {
-      // const response = await api.post('/auth/login', { email, password });
-      // const { token, user } = response.data;
-      // setAuthToken(token); // Gắn token vào mọi Request API sau này
-      // login(user, token);  // Lưu vào kho Zustand State
-      Alert.alert('Thành công', 'Đăng nhập thành công!');
-      navigation.navigate('Home');
+      const response = await api.post('/auth/login', { email, password });
+      const { token, user } = response.data;
+      setAuthToken(token); 
+      login(user, token); 
+      navigation.navigate('InputScreen');
     } catch (error: any) {
       Alert.alert('Đăng nhập thất bại', error.response?.data?.message || 'Máy chủ không phản hồi');
     }

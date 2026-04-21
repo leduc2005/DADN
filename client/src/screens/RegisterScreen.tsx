@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Settings, Eye, EyeOff } from 'lucide-react-native';
-import { api } from '../services/api';
+import { api } from '../services/request'
 
 export default function RegisterScreen({ navigation }: any) {
   const [name, setName] = useState('');
@@ -12,7 +12,7 @@ export default function RegisterScreen({ navigation }: any) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
-
+  
   const handleRegister = async () => {
     if (!name || !email || !password) return Alert.alert('Cảnh báo', 'Vui lòng nhập đủ các trường!');
     if (password !== confirmPassword) return Alert.alert('Lỗi', 'Mật khẩu nhập lại không khớp!');

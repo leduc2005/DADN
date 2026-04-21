@@ -4,6 +4,6 @@
     "lib": ["ES2020", "dom", "dom.iterable"],
     "types": ["jest"]
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": ["**/*.ts", "**/*.tsx", "src/services/motor.js", "src/services/auth.js"],
   "exclude": ["**/node_modules", "**/Pods"]
 }
