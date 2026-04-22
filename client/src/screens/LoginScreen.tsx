@@ -16,10 +16,10 @@ export default function LoginScreen({ navigation }: any) {
   const handleLogin = async () => {
     if (!email || !password) return Alert.alert('Lỗi', 'Vui lòng nhập Email và Mật khẩu');
     try {
-      const response = await api.post('/auth/login', { email, password });
-      const { token, user } = response.data;
-      setAuthToken(token); 
-      login(user, token); 
+      // const response = await api.post('/auth/login', { email, password });
+      // const { token, user } = response.data;
+      // setAuthToken(token); 
+      // login(user, token); 
       navigation.navigate('InputScreen');
     } catch (error: any) {
       Alert.alert('Đăng nhập thất bại', error.response?.data?.message || 'Máy chủ không phản hồi');
