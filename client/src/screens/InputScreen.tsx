@@ -1,67 +1,35 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal, KeyboardAvoidingView, Platform } from "react-native";
 import { ChevronLeft, Info, AlertTriangle, XCircle } from "lucide-react-native";
+import { runMotorSuggestion } from "../logic/validation";
+import { BearingType, DriveType, useProjectState } from "../store/projectState";
 
 interface InputScreenProps {
     navigation: any;
 }
 
-type DriveType =
-    | "Bánh răng trụ"
-    | "Bánh răng côn"
-    | "Trục vít tự hãm"
-    | "Trục vít không tự hãm"
-    | "Xích"
-    | "Bánh ma sát"
-    | "Đai";
-
-type BearingType = "Ổ lăn" | "Ổ trượt";
-
-interface DriveItem {
-    id: string;
-    type: DriveType;
-    quantity: string;
-    transmissionRatio: string;
-    isOpen: boolean;
-    z?: "1" | "2" | "4";
-}
-
-interface BearingItem {
-    id: string;
-    type: BearingType;
-    quantity: string;
-    isOpen: boolean;
-}
-
 export default function InputScreen({ navigation }: InputScreenProps) {
-    const [calculateSession, setCalculateSession] = useState("");
+    const {
+        calculateSession,
+        operatingData,
+        loadData,
+        efficiencyData,
+        driveItems,
+        bearingItems,
+        setCalculateSession,
+        setOperatingField,
+        setLoadField,
+        setEfficiencyField,
+        addDriveItem,
+        updateDriveItem,
+        removeDriveItem,
+        addBearingItem,
+        updateBearingItem,
+        removeBearingItem,
+    } = useProjectState();
 
-    const [operatingData, setOperatingData] = useState({
-        power: "", 
-        speed: "", 
-        serviceLife: "", 
-    });
-
-    const [loadType, setLoadType] = useState(""); 
-    const [workShifts, setWorkShifts] = useState("");
-
-    const [efficiencyData, setEfficiencyData] = useState({
-        etaBelt: "0.96",
-        etaBevelGear: "0.97",
-        etaStraightGear: "0.98",
-        etaWormSelfLocking: "0.7",
-        etaWormNonSelfLocking: "0.75",
-        etaChain: "0.96",
-        etaFriction: "0.9",
-        etaBearing: "0.995",
-        etaSlidingBearing: "0.97",
-        etaCoupling: "0.99",
-        uBelt: "4",
-        uGearbox: "10",
-    });
-
-    const [driveItems, setDriveItems] = useState<DriveItem[]>([]);
-    const [bearingItems, setBearingItems] = useState<BearingItem[]>([]);
+    const loadType = loadData.loadType;
+    const workShifts = loadData.workShifts;
 
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
@@ -74,67 +42,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
     const bearingTypeOptions: BearingType[] = ["Ổ lăn", "Ổ trượt"];
     const zOptions: Array<"1" | "2" | "4"> = ["1", "2", "4"];
 
-    const createId = () => `${Date.now()}-${Math.random()}`;
     const isDriveForcedOpen = (type: DriveType) => type === "Trục vít không tự hãm" || type === "Đai";
-
-    const addDriveItem = () => {
-        setDriveItems(prev => [
-            ...prev,
-            {
-                id: createId(),
-                type: "Bánh răng trụ",
-                quantity: "1",
-                transmissionRatio: "",
-                isOpen: false,
-            },
-        ]);
-    };
-
-    const addBearingItem = () => {
-        setBearingItems(prev => [
-            ...prev,
-            {
-                id: createId(),
-                type: "Ổ lăn",
-                quantity: "1",
-                isOpen: true,
-            },
-        ]);
-    };
-
-    const updateDriveItem = (id: string, patch: Partial<DriveItem>) => {
-        setDriveItems(prev =>
-            prev.map(item => {
-                if (item.id !== id) return item;
-                const nextType = patch.type ?? item.type;
-                const forcedOpen = isDriveForcedOpen(nextType);
-                const nextZ = nextType === "Trục vít không tự hãm" ? patch.z ?? item.z : undefined;
-                return {
-                    ...item,
-                    ...patch,
-                    type: nextType,
-                    isOpen: forcedOpen ? true : patch.isOpen ?? item.isOpen,
-                    z: nextZ,
-                };
-            })
-        );
-    };
-
-    const updateBearingItem = (id: string, patch: Partial<BearingItem>) => {
-        setBearingItems(prev =>
-            prev.map(item => {
-                if (item.id !== id) return item;
-                return {
-                    ...item,
-                    ...patch,
-                    isOpen: true,
-                };
-            })
-        );
-    };
-
-    const removeDriveItem = (id: string) => setDriveItems(prev => prev.filter(item => item.id !== id));
-    const removeBearingItem = (id: string) => setBearingItems(prev => prev.filter(item => item.id !== id));
 
     const getDriveEta = (type: DriveType) => {
         switch (type) {
@@ -275,13 +183,28 @@ export default function InputScreen({ navigation }: InputScreenProps) {
 
         const driveItemsWithEfficiency = driveItems.map(item => ({
             ...item,
-                eta: getDriveEta(item.type),
+            eta: getDriveEta(item.type),
+            efficiencyTransmissionRatio: getDriveEta(item.type),
         }));
 
         const bearingItemsWithEfficiency = bearingItems.map(item => ({
             ...item,
-                eta: getBearingEta(item.type),
+            eta: getBearingEta(item.type),
+            efficiencyTransmissionRatio: getBearingEta(item.type),
         }));
+
+        const normalizedItems = {
+            driveItem: driveItemsWithEfficiency,
+            bearingItem: bearingItemsWithEfficiency,
+        };
+
+        const { Pct, n_sb, motors, ratios } = runMotorSuggestion({
+            operatingData,
+            loadData: { loadType, workShifts },
+            efficiencyData,
+            driveItems: driveItemsWithEfficiency,
+            bearingItems: bearingItemsWithEfficiency,
+        });
 
         navigation.navigate("MotorSelection", {
             inputData: {
@@ -295,20 +218,22 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                     loadType,
                     workShifts,
                 },
-                Item: {
-                    driveItem: driveItemsWithEfficiency,
-                    bearingItem: bearingItemsWithEfficiency,
-                },
+                item: normalizedItems,
+                Item: normalizedItems,
                 calculateSession: calculateSession.trim(),
                 transmissionData: {
                     uBelt: efficiencyData.uBelt,
                     uGearBox: efficiencyData.uGearbox,
                 },
             },
+            calculatedPower: Pct,
+            requiredSpeed: n_sb,
+            motors,
+            ratios,
         });
     };
 
-    const renderInput = (label: string, value: string, setValue: (val: string) => void, placeholder: string) => (
+    const renderInput = (label: string, value: string, setValue: (val: string) => void, placeholder: string, helperText?: string) => (
         <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>{label}</Text>
             <TextInput
@@ -319,11 +244,12 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                 placeholder={placeholder}
                 placeholderTextColor="#9ca3af"
             />
+            {helperText ? <Text style={styles.inputHelperText}>{helperText}</Text> : null}
         </View>
     );
 
-    const renderSmallInput = (label: string, value: string, setValue: (val: string) => void) => (
-        <View style={styles.smallInputWrapper}>
+    const renderSmallInput = (label: string, value: string, setValue: (val: string) => void, key?: string) => (
+        <View key={key} style={styles.smallInputWrapper}>
             <Text style={styles.smallInputLabel}>{label}</Text>
             <TextInput
                 style={styles.smallTextInput}
@@ -381,9 +307,9 @@ export default function InputScreen({ navigation }: InputScreenProps) {
 
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Thông số gốc</Text>
-                        {renderInput("Công suất (P) - kW", operatingData.power, (val) => setOperatingData({ ...operatingData, power: val }), "Nhập công suất")}
-                        {renderInput("Vòng quay (n) - v/ph", operatingData.speed, (val) => setOperatingData({ ...operatingData, speed: val }), "Nhập vòng quay")}
-                        {renderInput("Thời gian phục vụ (L) - năm", operatingData.serviceLife, (val) => setOperatingData({ ...operatingData, serviceLife: val }), "Nhập thời gian")}
+                        {renderInput("Công suất (P) - kW", operatingData.power, (val) => setOperatingField("power", val), "Nhập công suất", "Giới hạn: 0.1 - 500 kW")}
+                        {renderInput("Vòng quay (n) - v/ph", operatingData.speed, (val) => setOperatingField("speed", val), "Nhập vòng quay", "Giới hạn: 10 - 10000 rpm")}
+                        {renderInput("Thời gian phục vụ (L) - năm", operatingData.serviceLife, (val) => setOperatingField("serviceLife", val), "Nhập thời gian", "Giới hạn: 1 - 50 năm")}
                     </View>
 
                     <View style={styles.section}>
@@ -392,7 +318,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                         <Text style={styles.inputLabel}>Đặc tính tải</Text>
                         <View style={styles.pillsContainer}>
                             {loadTypeOptions.map(option => (
-                                <TouchableOpacity key={option} style={[styles.pill, loadType === option && styles.pillActive]} onPress={() => setLoadType(option)}>
+                                <TouchableOpacity key={option} style={[styles.pill, loadType === option && styles.pillActive]} onPress={() => setLoadField("loadType", option)}>
                                     <Text style={[styles.pillText, loadType === option && styles.pillTextActive]}>{option}</Text>
                                 </TouchableOpacity>
                             ))}
@@ -401,7 +327,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                         <Text style={[styles.inputLabel, { marginTop: 16 }]}>Số ca làm việc</Text>
                         <View style={styles.pillsContainer}>
                             {workShiftOptions.map(option => (
-                                <TouchableOpacity key={option} style={[styles.pill, workShifts === option && styles.pillActive]} onPress={() => setWorkShifts(option)}>
+                                <TouchableOpacity key={option} style={[styles.pill, workShifts === option && styles.pillActive]} onPress={() => setLoadField("workShifts", option)}>
                                     <Text style={[styles.pillText, workShifts === option && styles.pillTextActive]}>{option}</Text>
                                 </TouchableOpacity>
                             ))}
@@ -534,12 +460,12 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                         <Text style={styles.sectionTitle}>Cấu hình Sơ đồ động</Text>
                         <View style={styles.gridContainer}>
                             {etaConfigs.map(config =>
-                                renderSmallInput(config.label, efficiencyData[config.key], val => setEfficiencyData({ ...efficiencyData, [config.key]: val }))
+                                renderSmallInput(config.label, efficiencyData[config.key], val => setEfficiencyField(config.key, val), config.key)
                             )}
                         </View>
                         <View style={[styles.gridContainer, { marginTop: 16 }]}>
-                            {renderSmallInput("u Đai", efficiencyData.uBelt, val => setEfficiencyData({ ...efficiencyData, uBelt: val }))}
-                            {renderSmallInput("u HGT", efficiencyData.uGearbox, val => setEfficiencyData({ ...efficiencyData, uGearbox: val }))}
+                            {renderSmallInput("u Đai", efficiencyData.uBelt, val => setEfficiencyField("uBelt", val))}
+                            {renderSmallInput("u HGT", efficiencyData.uGearbox, val => setEfficiencyField("uGearbox", val))}
                         </View>
                     </View>
                 </ScrollView>
@@ -599,6 +525,7 @@ const styles = StyleSheet.create({
     inputWrapper: { marginBottom: 16 },
     inputLabel: { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 8 },
     textInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 14, fontSize: 16, color: '#111827' },
+    inputHelperText: { fontSize: 12, color: '#6b7280', marginTop: 6 },
     smallInputWrapper: { width: '48%', marginBottom: 12 },
     smallInputLabel: { fontSize: 12, fontWeight: '500', color: '#6b7280', marginBottom: 6 },
     smallTextInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 10, fontSize: 14, color: '#111827' },

@@ -4,35 +4,7 @@
  * Sử dụng cho Module 2: Tính toán động cơ, bộ truyền đai, bánh răng
  */
 
-// ============================================================
-// A. DỮ LIỆU CATALOGUE ĐỘNG CƠ ĐIỆN 4A (Bảng P1.3 - SGK)
-// Chọn loại: Động cơ 3 pha không đồng bộ roto ngắn mạch
-// Đơn vị: P [kW], n [v/ph]
-// ============================================================
-const MOTOR_CATALOGUE = [
-  // 1500 rpm sync (~1450 rpm actual) - 4 cực
-  { model: '4A71B4Y3',  power: 0.55, speed: 1390, cosPhi: 0.70, eta: 70.0, Tk_Tdn: 2.0, Tmm_Tdn: 2.0 },
-  { model: '4A80A4Y3',  power: 0.75, speed: 1430, cosPhi: 0.81, eta: 75.5, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A80B4Y3',  power: 1.10, speed: 1430, cosPhi: 0.83, eta: 77.0, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A90L4Y3',  power: 2.20, speed: 1435, cosPhi: 0.83, eta: 80.0, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A100L4Y3', power: 4.00, speed: 1430, cosPhi: 0.84, eta: 84.0, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A112M4Y3', power: 5.50, speed: 1445, cosPhi: 0.85, eta: 85.5, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A132S4Y3', power: 7.50, speed: 1455, cosPhi: 0.86, eta: 87.5, Tk_Tdn: 2.2, Tmm_Tdn: 2.2 },
-  { model: '4A132M4Y3', power: 11.0, speed: 1460, cosPhi: 0.87, eta: 87.5, Tk_Tdn: 2.2, Tmm_Tdn: 2.2 },
-  { model: '4A160S4Y3', power: 15.0, speed: 1465, cosPhi: 0.88, eta: 89.0, Tk_Tdn: 2.2, Tmm_Tdn: 2.2 },
-  { model: '4A160M4Y3', power: 18.5, speed: 1465, cosPhi: 0.89, eta: 90.0, Tk_Tdn: 2.2, Tmm_Tdn: 2.2 },
-  // 3000 rpm sync (~2900 rpm actual) - 2 cực
-  { model: '4A80A2Y3',  power: 1.50, speed: 2850, cosPhi: 0.85, eta: 77.0, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A80B2Y3',  power: 2.20, speed: 2850, cosPhi: 0.87, eta: 80.0, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A90L2Y3',  power: 3.00, speed: 2850, cosPhi: 0.88, eta: 82.5, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A100S2Y3', power: 4.00, speed: 2880, cosPhi: 0.89, eta: 83.0, Tk_Tdn: 2.5, Tmm_Tdn: 2.0 },
-  { model: '4A100L2Y3', power: 5.50, speed: 2880, cosPhi: 0.89, eta: 85.5, Tk_Tdn: 2.5, Tmm_Tdn: 2.0 },
-  { model: '4A112M2Y3', power: 7.50, speed: 2922, cosPhi: 0.88, eta: 87.5, Tk_Tdn: 2.5, Tmm_Tdn: 2.0 },
-  { model: '4A132M2Y3', power: 11.0, speed: 2930, cosPhi: 0.90, eta: 88.0, Tk_Tdn: 2.5, Tmm_Tdn: 2.0 },
-  { model: '4A160S2Y3', power: 15.0, speed: 2940, cosPhi: 0.91, eta: 89.5, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A160M2Y3', power: 18.5, speed: 2940, cosPhi: 0.92, eta: 90.0, Tk_Tdn: 2.2, Tmm_Tdn: 2.0 },
-  { model: '4A200M2Y3', power: 37.0, speed: 2950, cosPhi: 0.89, eta: 91.0, Tk_Tdn: 2.0, Tmm_Tdn: 2.0 },
-];
+const { MOTOR_CATALOGUE } = require('../data/motorCatalogue');
 
 // ============================================================
 // B. HIỆU SUẤT CÁC BỘ TRUYỀN (Bảng 2.3 - SGK Trịnh Chất)
@@ -61,22 +33,26 @@ const TRANSMISSION_RATIO = {
 // ============================================================
 // D. THÔNG SỐ ĐAI THANG THƯỜNG (Bảng 4.13 - SGK Trịnh Chất)
 // bt: chiều rộng trên, b: chiều rộng đáy, h: chiều cao, y0: khoảng cách từ tâm đến đáy
-// A: diện tích tiết diện [mm²], d1_min/d1_max: đường kính bánh đai nhỏ [mm]
-// L_min/L_max: chiều dài giới hạn [mm], P0: công suất cơ sở [kW] tại n=960rpm (tra bảng)
+// A: diện tích tiết diện [mm²], d1_range: đường kính bánh đai nhỏ [mm]
+// L_range: chiều dài giới hạn [mm]
 // ============================================================
 const BELT_SECTIONS = {
-  O: { bt: 10, b: 13, h:  8, y0: 2.8, A:  47, d1_range: [63, 180],  L_range: [400,  2500], P0_ref: 0.96  },
-  A: { bt: 13, b: 16, h: 10, y0: 3.3, A:  81, d1_range: [90, 220],  L_range: [560,  4000], P0_ref: 1.84  },
-  B: { bt: 17, b: 19, h: 11, y0: 4.0, A: 138, d1_range: [140, 380], L_range: [800,  6300], P0_ref: 3.76  },
-  C: { bt: 22, b: 22, h: 14, y0: 4.8, A: 230, d1_range: [200, 560], L_range: [1800, 10600], P0_ref: 7.64  },
-  D: { bt: 32, b: 32, h: 19, y0: 6.0, A: 476, d1_range: [355, 600], L_range: [3150, 15000], P0_ref: 15.3  },
+  O: { bt: 8.5, b: 10, h: 6, y0: 2.1, A: 47, d1_range: [70, 140], L_range: [400, 2500] },
+  A: { bt: 11, b: 13, h: 8, y0: 2.8, A: 81, d1_range: [100, 200], L_range: [560, 4000] },
+  B: { bt: 14, b: 17, h: 10.5, y0: 4.0, A: 138, d1_range: [140, 280], L_range: [800, 6300] },
+  C: { bt: 19, b: 22, h: 13.5, y0: 4.8, A: 230, d1_range: [200, 400], L_range: [1800, 10600] },
+  D: { bt: 27, b: 32, h: 19, y0: 6.9, A: 476, d1_range: [315, 630], L_range: [3150, 15000] },
+  E: { bt: 32, b: 38, h: 23.5, y0: 8.3, A: 692, d1_range: [500, 1000], L_range: [4500, 18000] },
+  F: { bt: 42, b: 50, h: 30, y0: 11, A: 1170, d1_range: [800, 1600], L_range: [6300, 18000] },
 };
 
 // Dãy chiều dài đai thang tiêu chuẩn [mm] (Bảng 4.13)
 const BELT_STANDARD_LENGTHS = [
-  400, 450, 500, 560, 630, 710, 800, 900, 1000, 1120, 1250, 1400, 1600, 1800,
-  2000, 2240, 2500, 2800, 3150, 3550, 4000, 4500, 5000, 5600, 6300, 7100,
-  8000, 9000, 10000, 11200, 12500, 14000,
+  400, 425, 450, 475, 500, 530, 560, 600, 630, 670, 710, 750, 800, 850, 900,
+  950, 1000, 1060, 1120, 1180, 1250, 1320, 1400, 1500, 1600, 1700, 1800, 1900,
+  2000, 2120, 2240, 2360, 2500, 2650, 2800, 3000, 3150, 3350, 3550, 3750, 4000,
+  4250, 4500, 4750, 5000, 5300, 5600, 6000, 6300, 6700, 7100, 7500, 8000, 8500,
+  9000, 9500, 10000, 10600, 11200, 11800, 12500, 13200, 14000,
 ];
 
 // Dãy đường kính bánh đai tiêu chuẩn [mm]
@@ -96,8 +72,81 @@ const K_ALPHA_TABLE = [
   { alpha: 130, Ka: 0.86 },
   { alpha: 120, Ka: 0.82 },
   { alpha: 110, Ka: 0.78 },
-  { alpha: 100, Ka: 0.74 },
+  { alpha: 100, Ka: 0.73 },
+  { alpha: 90, Ka: 0.68 },
+  { alpha: 80, Ka: 0.62 },
+  { alpha: 70, Ka: 0.56 },
 ];
+
+// Hệ số Cl theo tỉ số l / l0 (Bảng 4.16 - SGK)
+const CL_TABLE = [
+  { ratio: 0.5, Cl: 0.86 },
+  { ratio: 0.6, Cl: 0.89 },
+  { ratio: 0.8, Cl: 0.95 },
+  { ratio: 1.0, Cl: 1.00 },
+  { ratio: 1.2, Cl: 1.04 },
+  { ratio: 1.4, Cl: 1.07 },
+  { ratio: 1.6, Cl: 1.10 },
+  { ratio: 1.8, Cl: 1.13 },
+  { ratio: 2.0, Cl: 1.15 },
+  { ratio: 2.4, Cl: 1.20 },
+];
+
+// Chiều dài thí nghiệm l0 dùng cùng Bảng 4.16 và 4.19
+const BELT_LENGTH_REFERENCE = {
+  O: 1320,
+  A: 1700,
+  B: 2240,
+  C: 3750,
+  D: 6000,
+};
+
+// Hệ số Cu theo tỉ số truyền u (Bảng 4.17 - SGK)
+const CU_TABLE = [
+  { u: 1.0, Cu: 1.00 },
+  { u: 1.2, Cu: 1.07 },
+  { u: 1.6, Cu: 1.11 },
+  { u: 1.8, Cu: 1.12 },
+  { u: 2.2, Cu: 1.13 },
+  { u: 2.4, Cu: 1.135 },
+  { u: 3.0, Cu: 1.14 },
+];
+
+// Bảng công suất cho phép cơ sở [P0] cho đai thang thường (Bảng 4.19 - SGK)
+const P0_TABLE = {
+  O: [
+    { d1: 63, values: [{ v: 3, P0: 0.33 }, { v: 5, P0: 0.49 }, { v: 10, P0: 0.83 }, { v: 15, P0: 1.04 }, { v: 20, P0: 1.14 }] },
+    { d1: 90, values: [{ v: 3, P0: 0.46 }, { v: 5, P0: 0.64 }, { v: 10, P0: 1.17 }, { v: 15, P0: 1.54 }, { v: 20, P0: 1.80 }, { v: 25, P0: 1.88 }] },
+    { d1: 112, values: [{ v: 3, P0: 0.48 }, { v: 5, P0: 0.75 }, { v: 10, P0: 1.33 }, { v: 15, P0: 1.78 }, { v: 20, P0: 2.12 }, { v: 25, P0: 2.30 }] },
+  ],
+  A: [
+    { d1: 112, values: [{ v: 3, P0: 0.70 }, { v: 5, P0: 1.08 }, { v: 10, P0: 1.85 }, { v: 15, P0: 2.40 }, { v: 20, P0: 2.73 }, { v: 25, P0: 2.85 }] },
+    { d1: 125, values: [{ v: 3, P0: 0.78 }, { v: 5, P0: 1.17 }, { v: 10, P0: 2.00 }, { v: 15, P0: 2.75 }, { v: 20, P0: 3.08 }, { v: 25, P0: 3.26 }] },
+    { d1: 140, values: [{ v: 3, P0: 0.80 }, { v: 5, P0: 1.25 }, { v: 10, P0: 2.20 }, { v: 15, P0: 2.92 }, { v: 20, P0: 3.44 }, { v: 25, P0: 3.75 }] },
+    { d1: 160, values: [{ v: 3, P0: 0.84 }, { v: 5, P0: 1.32 }, { v: 10, P0: 2.34 }, { v: 15, P0: 3.14 }, { v: 20, P0: 3.78 }, { v: 25, P0: 4.09 }] },
+    { d1: 180, values: [{ v: 3, P0: 0.88 }, { v: 5, P0: 1.38 }, { v: 10, P0: 2.47 }, { v: 15, P0: 3.37 }, { v: 20, P0: 4.06 }, { v: 25, P0: 4.46 }] },
+  ],
+  B: [
+    { d1: 125, values: [{ v: 3, P0: 0.92 }, { v: 5, P0: 1.38 }, { v: 10, P0: 2.25 }, { v: 15, P0: 2.61 }] },
+    { d1: 180, values: [{ v: 3, P0: 1.20 }, { v: 5, P0: 2.13 }, { v: 10, P0: 3.38 }, { v: 15, P0: 4.61 }, { v: 20, P0: 5.34 }, { v: 25, P0: 5.93 }] },
+    { d1: 224, values: [{ v: 3, P0: 1.35 }, { v: 5, P0: 2.30 }, { v: 10, P0: 4.00 }, { v: 15, P0: 5.53 }, { v: 20, P0: 6.46 }, { v: 25, P0: 7.08 }] },
+    { d1: 280, values: [{ v: 3, P0: 1.65 }, { v: 5, P0: 2.51 }, { v: 10, P0: 4.47 }, { v: 15, P0: 5.57 }, { v: 20, P0: 7.38 }, { v: 25, P0: 8.22 }] },
+  ],
+  C: [
+    { d1: 200, values: [{ v: 3, P0: 1.83 }, { v: 5, P0: 2.73 }, { v: 10, P0: 4.55 }, { v: 15, P0: 5.75 }, { v: 20, P0: 6.28 }] },
+    { d1: 250, values: [{ v: 3, P0: 2.30 }, { v: 5, P0: 3.54 }, { v: 10, P0: 6.02 }, { v: 15, P0: 8.00 }, { v: 20, P0: 9.23 }, { v: 25, P0: 9.69 }] },
+    { d1: 280, values: [{ v: 3, P0: 2.46 }, { v: 5, P0: 3.77 }, { v: 10, P0: 6.59 }, { v: 15, P0: 8.82 }, { v: 20, P0: 10.27 }, { v: 25, P0: 11.00 }] },
+    { d1: 315, values: [{ v: 3, P0: 2.63 }, { v: 5, P0: 3.88 }, { v: 10, P0: 7.39 }, { v: 15, P0: 9.71 }, { v: 20, P0: 11.33 }, { v: 25, P0: 12.27 }] },
+    { d1: 355, values: [{ v: 3, P0: 2.84 }, { v: 5, P0: 4.29 }, { v: 10, P0: 7.57 }, { v: 15, P0: 10.51 }, { v: 20, P0: 12.42 }, { v: 25, P0: 13.63 }] },
+    { d1: 450, values: [{ v: 3, P0: 3.08 }, { v: 5, P0: 4.74 }, { v: 10, P0: 8.54 }, { v: 15, P0: 11.53 }, { v: 20, P0: 14.15 }, { v: 25, P0: 15.62 }] },
+  ],
+  D: [
+    { d1: 355, values: [{ v: 5, P0: 6.67 }, { v: 10, P0: 11.17 }, { v: 15, P0: 14.91 }, { v: 20, P0: 16.50 }, { v: 25, P0: 17.51 }] },
+    { d1: 500, values: [{ v: 5, P0: 9.75 }, { v: 10, P0: 15.57 }, { v: 15, P0: 20.23 }, { v: 20, P0: 24.90 }, { v: 25, P0: 26.47 }] },
+    { d1: 630, values: [{ v: 5, P0: 10.76 }, { v: 10, P0: 17.46 }, { v: 15, P0: 23.60 }, { v: 20, P0: 27.89 }, { v: 25, P0: 32.19 }] },
+    { d1: 800, values: [{ v: 5, P0: 11.14 }, { v: 10, P0: 19.16 }, { v: 15, P0: 26.50 }, { v: 20, P0: 31.11 }, { v: 25, P0: 34.23 }] },
+  ],
+};
 
 // Hệ số tải trọng động Kd (Bảng 4.7 - SGK)
 // engine_type: 'electric' | 'combustion_single' | 'combustion_multi'
@@ -148,9 +197,8 @@ const GEAR_MATERIALS = [
     name: 'Thép 40X - Tôi bề mặt HRC 50..54',
     HB: null, HRC: 52,
     sigma_b: 1000, sigma_ch: 800,
-    sigma_Hlim: 17 * 52,        // = 884 MPa (công thức HRC > 45)
-    sigma_Flim: 1.8 * 52 * 10,  // sử dụng giá trị bảng ~ 500..600 (lấy 500 an toàn)
-    sigma_Flim_override: 500,
+    sigma_Hlim: 17 * 52 + 200,  // = 1084 MPa (tôi bề mặt bằng dòng điện)
+    sigma_Flim_override: 550,
     s_H: 1.2, s_F: 1.75,
   },
   {
@@ -159,8 +207,8 @@ const GEAR_MATERIALS = [
     HB: null, HRC: 60,
     sigma_b: 800, sigma_ch: 650,
     sigma_Hlim: 23 * 60,        // = 1380 MPa
-    sigma_Flim_override: 450,   // Lấy theo bảng
-    s_H: 1.2, s_F: 1.75,
+    sigma_Flim_override: 750,
+    s_H: 1.2, s_F: 1.55,
   },
   {
     id: 'cast_iron_SCh20',
@@ -213,6 +261,10 @@ module.exports = {
   BELT_STANDARD_LENGTHS,
   BELT_STANDARD_DIAMETERS,
   K_ALPHA_TABLE,
+  CL_TABLE,
+  BELT_LENGTH_REFERENCE,
+  CU_TABLE,
+  P0_TABLE,
   KD_TABLE,
   GEAR_MATERIALS,
   KA,

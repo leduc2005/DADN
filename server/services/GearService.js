@@ -94,9 +94,9 @@ function getGearMaterials() {
 /**
  * Tính ứng suất tiếp xúc và uốn cho phép
  *
- * Công thức (6.1a, 6.2a - SGK):
- *   [σH] = σ_Hlim * KHL / s_H
- *   [σF] = σ_Flim * KFL / (s_F * YR * Yx)
+ * Công thức đầy đủ theo tài liệu:
+ *   [σH] = (σ⁰Hlim / sH) × ZR × Zv × KxH × KHL
+ *   [σF] = (σ⁰Flim / sF) × YR × YS × KxF × KFC × KFL
  *
  * Với hệ số tuổi thọ:
  *   KHL = max(1, (N_HO / N_HE)^(1/6))  (bánh răng HB ≤ 350)
@@ -109,11 +109,23 @@ function getGearMaterials() {
  * @param {number} u      - Tỉ số truyền cấp đang tính
  * @param {number} L_hours - Tuổi thọ làm việc [giờ]
  * @param {object} [loadProfile] - Chế độ tải: { T1_ratio: 1, T2_ratio:0.6, t1:0.5, t2:0.5 }
+ * Giai đoạn hiện tại vẫn dùng tính sơ bộ nên các hệ số công nghệ/môi trường mặc định = 1.0.
+ *
+ * @param {object} [factors] - Các hệ số mở rộng của công thức đầy đủ
  * @returns {object} Ứng suất cho phép các bánh
  */
-function calculateAllowableStress(mat1Id, mat2Id, n1_rpm, u, L_hours, loadProfile = null) {
+function calculateAllowableStress(mat1Id, mat2Id, n1_rpm, u, L_hours, loadProfile = null, factors = {}) {
   const mat1 = getMaterialProps(mat1Id);
   const mat2 = getMaterialProps(mat2Id);
+  const {
+    ZR = 1.0,
+    Zv = 1.0,
+    KxH = 1.0,
+    YR = 1.0,
+    YS = 1.0,
+    KxF = 1.0,
+    KFC = 1.0,
+  } = factors;
 
   const n2_rpm = n1_rpm / u;
 
@@ -154,20 +166,18 @@ function calculateAllowableStress(mat1Id, mat2Id, n1_rpm, u, L_hours, loadProfil
   const KFL1 = NFE1 < NFO ? parseFloat(Math.pow(NFO / NFE1, 1 / 9).toFixed(4)) : 1.0;
   const KFL2 = NFE2 < NFO ? parseFloat(Math.pow(NFO / NFE2, 1 / 9).toFixed(4)) : 1.0;
 
-  // YR * Yx ≈ 1.0 (bề mặt phay thông thường - công thức 6.2a ghi chú)
-  const YR_Yx = 1.0;
-
-  const sigmaH1_allow = parseFloat((mat1.sigma_Hlim * KHL1 / mat1.s_H).toFixed(2));
-  const sigmaH2_allow = parseFloat((mat2.sigma_Hlim * KHL2 / mat2.s_H).toFixed(2));
+  const sigmaH1_allow = parseFloat((((mat1.sigma_Hlim / mat1.s_H) * ZR * Zv * KxH * KHL1)).toFixed(2));
+  const sigmaH2_allow = parseFloat((((mat2.sigma_Hlim / mat2.s_H) * ZR * Zv * KxH * KHL2)).toFixed(2));
   // [σH] lấy giá trị nhỏ hơn của hai bánh
   const sigmaH_allow  = Math.min(sigmaH1_allow, sigmaH2_allow);
 
-  const sigmaF1_allow = parseFloat((mat1.sigma_Flim * KFL1 / (mat1.s_F * YR_Yx)).toFixed(2));
-  const sigmaF2_allow = parseFloat((mat2.sigma_Flim * KFL2 / (mat2.s_F * YR_Yx)).toFixed(2));
+  const sigmaF1_allow = parseFloat((((mat1.sigma_Flim / mat1.s_F) * YR * YS * KxF * KFC * KFL1)).toFixed(2));
+  const sigmaF2_allow = parseFloat((((mat2.sigma_Flim / mat2.s_F) * YR * YS * KxF * KFC * KFL2)).toFixed(2));
 
   return {
     gear1: { material: mat1.name, sigma_Hlim: mat1.sigma_Hlim, sigma_Flim: mat1.sigma_Flim, KHL: KHL1, KFL: KFL1, sigmaH_allow: sigmaH1_allow, sigmaF_allow: sigmaF1_allow },
     gear2: { material: mat2.name, sigma_Hlim: mat2.sigma_Hlim, sigma_Flim: mat2.sigma_Flim, KHL: KHL2, KFL: KFL2, sigmaH_allow: sigmaH2_allow, sigmaF_allow: sigmaF2_allow },
+    factors: { ZR, Zv, KxH, YR, YS, KxF, KFC },
     sigmaH_allow, // Dùng cho bước thiết kế
     sigmaF1_allow,
     sigmaF2_allow,
@@ -217,17 +227,18 @@ function calculatePreliminaryDistance(T1_Nmm, u, sigmaH_allow, gearType = 'spur_
  *
  * Bước thực hiện:
  *   m ≈ (0.01 ÷ 0.02) * aw  → chọn m tiêu chuẩn
- *   z1 = 2*aw / (m*(u+1))   → làm tròn xuống
+ *   z1 = 2*aw*cosβ / (m*(u+1)) → làm tròn xuống
  *   z2 = u * z1              → làm tròn gần nhất, kiểm tra lại u_actual
  *   aw_actual = m*(z1+z2)/2  (Bánh răng trụ thẳng, dịch chỉnh bằng 0)
- *   d_w1 = 2*aw_actual/(u_actual+1); d_w2 = d_w1 * u_actual
+ *   dw1 = 2*aw/(u_actual+1); dw2 = dw1 * u_actual
  *
  * @param {number} aw  - Khoảng cách trục đã làm tròn [mm]
  * @param {number} u   - Tỉ số truyền
  * @param {string} [sign] - '+' bánh ngoài
+ * @param {number} [beta_rad=0] - Góc nghiêng răng [rad]
  * @returns {object} Thông số ăn khớp
  */
-function selectGearParameters(aw, u, sign = '+') {
+function selectGearParameters(aw, u, sign = '+', beta_rad = 0) {
   // Module sơ bộ m_n ∈ [0.01, 0.02] * aw
   const m_sb_min = 0.01 * aw;
   const m_sb_max = 0.02 * aw;
@@ -235,7 +246,7 @@ function selectGearParameters(aw, u, sign = '+') {
 
   // Số răng bánh dẫn z1
   const sign_val = sign === '+' ? 1 : -1;
-  const z1_raw = (2 * aw) / (m_n * (u + sign_val));
+  const z1_raw = (2 * aw * Math.cos(beta_rad)) / (m_n * (u + sign_val));
   const z1 = Math.floor(z1_raw); // Lấy số nguyên
   if (z1 < 17) {
     // Cảnh báo: có thể phát sinh cắt chân răng
@@ -248,11 +259,13 @@ function selectGearParameters(aw, u, sign = '+') {
   // Khoảng cách trục thực tế (không dịch chỉnh)
   const aw_actual = parseFloat(((m_n * (z1 + z2)) / 2).toFixed(2));
 
+  // Đường kính vòng lăn tách riêng để dùng cho kiểm nghiệm bền.
+  const dw1 = parseFloat(((2 * aw) / (u_actual + sign_val)).toFixed(2));
+  const dw2 = parseFloat((dw1 * u_actual).toFixed(2));
+
   // Đường kính vòng chia d = m*z
   const d1 = parseFloat((m_n * z1).toFixed(2));
   const d2 = parseFloat((m_n * z2).toFixed(2));
-  // Đường kính vòng lăn d_w (= d khi không dịch chỉnh)
-  const d_w1 = d1, d_w2 = d2;
   // Đường kính đỉnh răng da = d + 2m
   const da1 = parseFloat((d1 + 2 * m_n).toFixed(2));
   const da2 = parseFloat((d2 + 2 * m_n).toFixed(2));
@@ -268,7 +281,10 @@ function selectGearParameters(aw, u, sign = '+') {
     z1, z2,
     u_input: u, u_actual, u_error_pct,
     aw_input: aw, aw_actual,
-    d1, d2, d_w1, d_w2, da1, da2, df1, df2,
+    beta_rad: parseFloat(beta_rad.toFixed(6)),
+    beta_deg: parseFloat((beta_rad * 180 / Math.PI).toFixed(4)),
+    dw1, dw2,
+    d1, d2, d_w1: dw1, d_w2: dw2, da1, da2, df1, df2,
   };
 }
 
@@ -285,14 +301,15 @@ function selectGearParameters(aw, u, sign = '+') {
  * @returns {{ sigma_H: number, pass: boolean }}
  */
 function checkContactStrength(geomParams, T1_Nmm, u, bw_mm, sigmaH_allow) {
-  const { d_w1, z1, z2 } = geomParams;
+  const { z1, z2 } = geomParams;
+  const dw1 = geomParams.dw1 ?? geomParams.d_w1;
   const Z_M = GEAR_CONSTANTS.Z_M_steel_steel; // 274 MPa^0.5
   const Z_H = GEAR_CONSTANTS.Z_H;             // 1.76 (α=20°, răng thẳng)
   const Z_eps = calc_Z_epsilon(z1, z2);
   const K_H = GEAR_CONSTANTS.K_H_base;        // Lấy sơ bộ (≈ 1.0 để test, sẽ nội suy bảng sau)
 
   // σH = ZM * ZH * Zε * sqrt(2*T1*KH*(u+1)/ (bw*dw1²*u))
-  const inner = (2 * T1_Nmm * K_H * (u + 1)) / (bw_mm * Math.pow(d_w1, 2) * u);
+  const inner = (2 * T1_Nmm * K_H * (u + 1)) / (bw_mm * Math.pow(dw1, 2) * u);
   const sigma_H = parseFloat((Z_M * Z_H * Z_eps * Math.sqrt(inner)).toFixed(2));
 
   return {
@@ -318,7 +335,8 @@ function checkContactStrength(geomParams, T1_Nmm, u, bw_mm, sigmaH_allow) {
  * @returns {{ sigma_F1, sigma_F2, pass1, pass2 }}
  */
 function checkBendingStrength(geomParams, T1_Nmm, u, bw_mm, sigmaF1_allow, sigmaF2_allow) {
-  const { d_w1, m_n, z1, z2 } = geomParams;
+  const { m_n, z1, z2 } = geomParams;
+  const dw1 = geomParams.dw1 ?? geomParams.d_w1;
   const K_F = GEAR_CONSTANTS.K_F_base;
   const Y_eps = calc_Y_epsilon(z1, z2);
   const Y_F1 = calc_YF(z1);
@@ -326,7 +344,7 @@ function checkBendingStrength(geomParams, T1_Nmm, u, bw_mm, sigmaF1_allow, sigma
   const Y_beta = 1.0; // Răng thẳng β = 0°
 
   // σF1 chính xác: Công thức 6.43a
-  const base = (2 * T1_Nmm * K_F * Y_eps * Y_beta) / (bw_mm * d_w1 * m_n);
+  const base = (2 * T1_Nmm * K_F * Y_eps * Y_beta) / (bw_mm * dw1 * m_n);
   const sigma_F1 = parseFloat((base * Y_F1).toFixed(2));
   const sigma_F2 = parseFloat((sigma_F1 * Y_F2 / Y_F1).toFixed(2)); // 6.43b: σF2 = σF1*YF2/YF1
 
@@ -353,6 +371,8 @@ function checkBendingStrength(geomParams, T1_Nmm, u, bw_mm, sigmaF1_allow, sigma
  *   @param {number} params.L_hours      - Tuổi thọ [giờ]
  *   @param {string} [params.gearType]   - 'spur_symmetric'
  *   @param {string} [params.bearingPos] - 'symmetric' | 'asymmetric' | 'cantilever'
+ *   @param {number} [params.beta_deg=0] - Góc nghiêng răng [độ]
+ *   @param {number} [params.beta_rad]   - Góc nghiêng răng [rad], ưu tiên nếu có
  * @returns {object} Kết quả đầy đủ + trạng thái kiểm nghiệm
  */
 function calculateGearFull(params) {
@@ -366,17 +386,29 @@ function calculateGearFull(params) {
     gearType = 'spur_symmetric',
     bearingPos = 'symmetric',
     loadProfile = null,
+    beta_deg = 0,
+    beta_rad = null,
+    ZR = 1.0,
+    Zv = 1.0,
+    KxH = 1.0,
+    YR = 1.0,
+    YS = 1.0,
+    KxF = 1.0,
+    KFC = 1.0,
   } = params;
 
+  const betaRad = beta_rad ?? (beta_deg * Math.PI / 180);
+  const stressFactors = { ZR, Zv, KxH, YR, YS, KxF, KFC };
+
   // --- Bước 1: Ứng suất cho phép ---
-  const stressResult = calculateAllowableStress(mat1Id, mat2Id, n1_rpm, u, L_hours, loadProfile);
+  const stressResult = calculateAllowableStress(mat1Id, mat2Id, n1_rpm, u, L_hours, loadProfile, stressFactors);
 
   // --- Bước 2: Khoảng cách trục sơ bộ ---
   const distResult = calculatePreliminaryDistance(T1_Nmm, u, stressResult.sigmaH_allow, gearType, bearingPos);
   const aw = distResult.aw_rounded;
 
   // --- Bước 3: Thông số ăn khớp ---
-  const geomResult = selectGearParameters(aw, u);
+  const geomResult = selectGearParameters(aw, u, '+', betaRad);
 
   // Chiều rộng vành răng bw = ψba * aw [mm]
   const bw = parseFloat((distResult.psi_ba * aw).toFixed(2));
