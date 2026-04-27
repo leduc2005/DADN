@@ -1,12 +1,13 @@
 {
+  "name": "client",
+  "displayName": "client",
   "expo": {
     "name": "MixerSystem",
     "slug": "mixer-system",
     "version": "1.0.0",
-    "platforms": [
-      "ios",
-      "android",
-      "web"
+    "plugins": [
+      "expo-secure-store",
+      "expo-sqlite"
     ]
   }
 }
