@@ -14,6 +14,8 @@ app.use(express.json()); // Để server hiểu được JSON request
 
 // Khai báo các API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/motors', require('./routes/motorRoutes'));
+app.use('/api/v1/calculation', require('./routes/calculationRoutes'));
 
 // Basic Test Route
 app.get('/', (req, res) => {

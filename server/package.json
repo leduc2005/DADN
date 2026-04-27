@@ -15,6 +15,7 @@
     "express": "^4.22.1",
     "express-validator": "^7.3.1",
     "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.1.1",
     "mongoose": "^8.23.0"
   },
   "keywords": [],
