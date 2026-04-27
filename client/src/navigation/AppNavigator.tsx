@@ -7,8 +7,8 @@ import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import VerifyCodeScreen from '../screens/VerifyCodeScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
-import HomeScreen from '../screens/HomeScreen';
 import InputScreen from '../screens/InputScreen';
+import HomeScreen from '../screens/HomeScreen';
 import MotorSelectionScreen from '../screens/MotorSelectionScreen';
 
 import { useAuthBootstrap } from '../hooks/useAuthBootstrap';
