@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Bell, Plus } from 'lucide-react-native';
+import { Search, Bell, Plus, Trash2, Cloud, CloudOff } from 'lucide-react-native';
 import { useProjectState, CalculationSession } from '../store/projectState';
+import { getAllProjects, deleteProjectLocal, initDatabase } from '../database/sqlite';
+import { runFullSync } from '../services/api_sync';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface HomeScreenProps {
   navigation: any;
@@ -10,7 +13,39 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const { savedSessions } = useProjectState();
+  const { savedSessions, setSavedSessions, removeSession, resetInputState } = useProjectState();
+
+  // ── Load dữ liệu từ SQLite mỗi khi HomeScreen được focus ──
+  useFocusEffect(
+    useCallback(() => {
+      try {
+        initDatabase();
+        const projects = getAllProjects();
+        const sessions: CalculationSession[] = projects.map((p: any) => ({
+          id: p.session_id,
+          title: p.name,
+          date: new Date(p.created_at).toLocaleDateString('vi-VN', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+          }),
+          status: p.status === 'HOÀN THÀNH' ? 'HOÀN THÀNH' : 'ĐANG THỰC HIỆN',
+          motorModel: p.input_data?.motorModel,
+          motorPower: p.input_data?.motorPower,
+          nDc: p.input_data?.nDc,
+          uHop: p.input_data?.uHop,
+          uNgoai: p.input_data?.uNgoai,
+          beltResult: p.result_data?.beltResult,
+          gearResult: p.result_data?.gearResult,
+          systemTransmission: p.result_data?.systemTransmission,
+          rawInputData: p.input_data?.rawInputData,
+          // Metadata đồng bộ
+          is_synced: p.is_synced,
+        }));
+        setSavedSessions(sessions);
+      } catch (e) {
+        console.error('Lỗi load dữ liệu từ SQLite:', e);
+      }
+    }, [])
+  );
 
   const filtered = searchQuery.trim()
     ? savedSessions.filter((s) =>
@@ -19,10 +54,52 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       )
     : savedSessions;
 
-  const renderItem = ({ item }: { item: CalculationSession }) => {
+  // ── Xử lý nhấn vào Card để xem lại ──
+  const handleOpenSession = (item: CalculationSession) => {
+    navigation.navigate('Input', { historySession: item });
+  };
+
+  // ── Xử lý xóa lịch sử ──
+  const handleDeleteSession = (item: CalculationSession) => {
+    Alert.alert(
+      'Xóa bài toán',
+      `Bạn có chắc muốn xóa "${item.title}" không?`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              deleteProjectLocal(item.id);
+              removeSession(item.id);
+              // Kích hoạt đồng bộ ngầm gửi lệnh xóa lên server
+              runFullSync().catch(err => console.warn('Lỗi trigger sync xóa:', err));
+            } catch (e) {
+              console.error('Lỗi xóa bài toán:', e);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // ── Nút tạo bài toán mới ──
+  const handleNewProject = () => {
+    resetInputState();
+    navigation.navigate('Input');
+  };
+
+  const renderItem = ({ item }: { item: CalculationSession & { is_synced?: boolean } }) => {
     const isDone = item.status === 'HOÀN THÀNH';
+    const isSynced = (item as any).is_synced === true;
+
     return (
-      <TouchableOpacity style={styles.projectCard} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.projectCard}
+        activeOpacity={0.7}
+        onPress={() => handleOpenSession(item)}
+      >
         <View style={styles.cardTopRow}>
           <Text style={styles.projectTitle} numberOfLines={2}>{item.title}</Text>
           <View style={[styles.statusBadge, isDone ? styles.badgeDone : styles.badgeInProgress]}>
@@ -35,7 +112,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         {item.motorModel && (
           <View style={styles.motorRow}>
             <Text style={styles.motorLabel}>Động cơ:</Text>
-            <Text style={styles.motorValue}>{item.motorModel}</Text>
+            <Text style={styles.motorValue}> {item.motorModel}</Text>
             {item.motorPower !== undefined && (
               <Text style={styles.motorMeta}> · {item.motorPower} kW</Text>
             )}
@@ -48,7 +125,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.resultRow}>
             <Text style={styles.resultLabel}>Đai:</Text>
             <Text style={[styles.resultValue, item.beltResult.overall_pass ? styles.pass : styles.fail]}>
-              {item.beltResult.overall_pass ? 'Đạt ✓' : 'Chưa đạt ✗'}
+              {item.beltResult.overall_pass ? ' Đạt ✓' : ' Chưa đạt ✗'}
             </Text>
             {item.beltResult.section && (
               <Text style={styles.motorMeta}> · Tiết diện {item.beltResult.section}</Text>
@@ -59,10 +136,34 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.resultRow}>
             <Text style={styles.resultLabel}>Bánh răng:</Text>
             <Text style={[styles.resultValue, item.gearResult.overall_pass ? styles.pass : styles.fail]}>
-              {item.gearResult.overall_pass ? 'Đạt ✓' : 'Chưa đạt ✗'}
+              {item.gearResult.overall_pass ? ' Đạt ✓' : ' Chưa đạt ✗'}
             </Text>
           </View>
         )}
+
+        {/* Footer: Icon đồng bộ + Nút xóa */}
+        <View style={styles.cardFooter}>
+          <View style={styles.syncStatus}>
+            {isSynced ? (
+              <>
+                <Cloud size={14} color="#059669" />
+                <Text style={styles.syncedText}>Đã đồng bộ</Text>
+              </>
+            ) : (
+              <>
+                <CloudOff size={14} color="#9ca3af" />
+                <Text style={styles.unsyncedText}>Chưa đồng bộ</Text>
+              </>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => handleDeleteSession(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Trash2 size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -125,7 +226,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('Input')}
+        onPress={handleNewProject}
         activeOpacity={0.8}
       >
         <Plus size={28} color="#FFFFFF" strokeWidth={2.5} />
@@ -194,14 +295,35 @@ const styles = StyleSheet.create({
   textDone: { color: '#15803d' },
   textInProgress: { color: '#1d4ed8' },
   motorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  motorLabel: { fontSize: 12, color: '#6b7280', marginRight: 4 },
+  motorLabel: { fontSize: 12, color: '#6b7280' },
   motorValue: { fontSize: 12, fontWeight: '600', color: '#374151' },
   motorMeta: { fontSize: 12, color: '#9ca3af' },
   resultRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  resultLabel: { fontSize: 12, color: '#6b7280', marginRight: 4 },
+  resultLabel: { fontSize: 12, color: '#6b7280' },
   resultValue: { fontSize: 12, fontWeight: '700' },
   pass: { color: '#059669' },
   fail: { color: '#dc2626' },
+  // ── Card Footer: Sync icon + Delete button ──
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  syncStatus: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  syncedText: { fontSize: 11, color: '#059669', fontWeight: '500' },
+  unsyncedText: { fontSize: 11, color: '#9ca3af', fontWeight: '500' },
+  deleteBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#ef4444',
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#ef4444', shadowOpacity: 0.3,
+    shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
   emptyState: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 40, paddingBottom: 80,
