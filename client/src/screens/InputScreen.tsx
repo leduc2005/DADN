@@ -1,14 +1,17 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal, KeyboardAvoidingView, Platform } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Info, AlertTriangle, XCircle } from "lucide-react-native";
 import { runMotorSuggestion } from "../logic/validation";
 import { BearingType, DriveType, useProjectState } from "../store/projectState";
 
 interface InputScreenProps {
+    route: any;
     navigation: any;
 }
 
-export default function InputScreen({ navigation }: InputScreenProps) {
+export default function InputScreen({ route, navigation }: InputScreenProps) {
+    const historySession = route.params?.historySession;
     const {
         calculateSession,
         operatingData,
@@ -26,7 +29,15 @@ export default function InputScreen({ navigation }: InputScreenProps) {
         addBearingItem,
         updateBearingItem,
         removeBearingItem,
+        loadSessionFromHistory,
+        isReadOnly,
     } = useProjectState();
+
+    React.useEffect(() => {
+        if (historySession) {
+            loadSessionFromHistory(historySession);
+        }
+    }, [historySession]);
 
     const loadType = loadData.loadType;
     const workShifts = loadData.workShifts;
@@ -237,12 +248,13 @@ export default function InputScreen({ navigation }: InputScreenProps) {
         <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>{label}</Text>
             <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, isReadOnly && styles.textInputDisabled]}
                 keyboardType="numeric"
                 value={value}
                 onChangeText={setValue}
                 placeholder={placeholder}
                 placeholderTextColor="#9ca3af"
+                editable={!isReadOnly}
             />
             {helperText ? <Text style={styles.inputHelperText}>{helperText}</Text> : null}
         </View>
@@ -252,10 +264,11 @@ export default function InputScreen({ navigation }: InputScreenProps) {
         <View key={key} style={styles.smallInputWrapper}>
             <Text style={styles.smallInputLabel}>{label}</Text>
             <TextInput
-                style={styles.smallTextInput}
+                style={[styles.smallTextInput, isReadOnly && styles.textInputDisabled]}
                 keyboardType="numeric"
                 value={value}
                 onChangeText={setValue}
+                editable={!isReadOnly}
             />
         </View>
     );
@@ -276,12 +289,14 @@ export default function InputScreen({ navigation }: InputScreenProps) {
     ];
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.backButton}>
                     <ChevronLeft size={24} color="#374151" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Thông số đầu vào</Text>
+                <Text style={styles.headerTitle}>
+                    {isReadOnly ? "Xem Lịch sử (Chỉ xem)" : "Thông số đầu vào"}
+                </Text>
             </View>
 
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -291,16 +306,24 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={true}
                 >
+                    {isReadOnly && (
+                        <View style={styles.readOnlyBanner}>
+                            <Info size={20} color="#1d4ed8" />
+                            <Text style={styles.readOnlyText}>Bạn đang ở chế độ xem lại lịch sử. Dữ liệu bị khóa và không thể chỉnh sửa.</Text>
+                        </View>
+                    )}
+
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Phiên tính toán</Text>
                         <View style={styles.inputWrapper}>
                             <TextInput
-                                style={styles.textInput}
+                                style={[styles.textInput, isReadOnly && styles.textInputDisabled]}
                                 value={calculateSession}
                                 onChangeText={setCalculateSession}
                                 placeholder="Nhập tên"
                                 placeholderTextColor="#9ca3af"
                                 maxLength={30}
+                                editable={!isReadOnly}
                             />
                         </View>
                     </View>
@@ -318,7 +341,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                         <Text style={styles.inputLabel}>Đặc tính tải</Text>
                         <View style={styles.pillsContainer}>
                             {loadTypeOptions.map(option => (
-                                <TouchableOpacity key={option} style={[styles.pill, loadType === option && styles.pillActive]} onPress={() => setLoadField("loadType", option)}>
+                                <TouchableOpacity key={option} style={[styles.pill, loadType === option && styles.pillActive]} onPress={() => setLoadField("loadType", option)} disabled={isReadOnly}>
                                     <Text style={[styles.pillText, loadType === option && styles.pillTextActive]}>{option}</Text>
                                 </TouchableOpacity>
                             ))}
@@ -327,7 +350,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                         <Text style={[styles.inputLabel, { marginTop: 16 }]}>Số ca làm việc</Text>
                         <View style={styles.pillsContainer}>
                             {workShiftOptions.map(option => (
-                                <TouchableOpacity key={option} style={[styles.pill, workShifts === option && styles.pillActive]} onPress={() => setLoadField("workShifts", option)}>
+                                <TouchableOpacity key={option} style={[styles.pill, workShifts === option && styles.pillActive]} onPress={() => setLoadField("workShifts", option)} disabled={isReadOnly}>
                                     <Text style={[styles.pillText, workShifts === option && styles.pillTextActive]}>{option}</Text>
                                 </TouchableOpacity>
                             ))}
@@ -337,9 +360,11 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                     <View style={styles.section}>
                         <View style={styles.sectionHeaderRow}>
                             <Text style={styles.sectionTitle}>Bộ truyền động</Text>
-                            <TouchableOpacity style={styles.addBtn} onPress={addDriveItem}>
-                                <Text style={styles.addBtnText}>+ Thêm</Text>
-                            </TouchableOpacity>
+                            {!isReadOnly && (
+                                <TouchableOpacity style={styles.addBtn} onPress={addDriveItem}>
+                                    <Text style={styles.addBtnText}>+ Thêm</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
 
                         {driveItems.length === 0 ? <Text style={styles.helperText}>Chưa có bộ truyền động nào. Nhấn + Thêm để bắt đầu.</Text> : null}
@@ -350,9 +375,11 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                                 <View key={item.id} style={styles.dynamicItemCard}>
                                     <View style={styles.dynamicItemHeader}>
                                         <Text style={styles.dynamicItemTitle}>Bộ truyền động #{idx + 1}</Text>
-                                        <TouchableOpacity onPress={() => removeDriveItem(item.id)}>
-                                            <Text style={styles.removeText}>Xóa</Text>
-                                        </TouchableOpacity>
+                                        {!isReadOnly && (
+                                            <TouchableOpacity onPress={() => removeDriveItem(item.id)}>
+                                                <Text style={styles.removeText}>Xóa</Text>
+                                            </TouchableOpacity>
+                                        )}
                                     </View>
 
                                     <Text style={styles.inputLabel}>Loại bộ truyền động</Text>
@@ -362,6 +389,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                                                 key={`${item.id}-${option}`}
                                                 style={[styles.pill, item.type === option && styles.pillActive]}
                                                 onPress={() => updateDriveItem(item.id, { type: option })}
+                                                disabled={isReadOnly}
                                             >
                                                 <Text style={[styles.pillText, item.type === option && styles.pillTextActive]}>{option}</Text>
                                             </TouchableOpacity>
@@ -378,6 +406,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                                         <TouchableOpacity
                                             style={[styles.booleanBtn, item.isOpen && styles.booleanBtnActive, forceOpen && styles.booleanBtnDisabled]}
                                             onPress={() => updateDriveItem(item.id, { isOpen: true })}
+                                            disabled={isReadOnly || forceOpen}
                                         >
                                             <Text style={[styles.booleanBtnText, item.isOpen && styles.booleanBtnTextActive]}>Hở (true)</Text>
                                         </TouchableOpacity>
@@ -388,6 +417,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                                                 forceOpen && styles.booleanBtnDisabled,
                                             ]}
                                             onPress={() => !forceOpen && updateDriveItem(item.id, { isOpen: false })}
+                                            disabled={isReadOnly || forceOpen}
                                         >
                                             <Text style={[styles.booleanBtnText, !item.isOpen && styles.booleanBtnTextActive]}>Không hở (false)</Text>
                                         </TouchableOpacity>
@@ -403,6 +433,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                                                         key={`${item.id}-z-${z}`}
                                                         style={[styles.pill, item.z === z && styles.pillActive]}
                                                         onPress={() => updateDriveItem(item.id, { z })}
+                                                        disabled={isReadOnly}
                                                     >
                                                         <Text style={[styles.pillText, item.z === z && styles.pillTextActive]}>{z}</Text>
                                                     </TouchableOpacity>
@@ -418,9 +449,11 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                     <View style={styles.section}>
                         <View style={styles.sectionHeaderRow}>
                             <Text style={styles.sectionTitle}>Ổ truyền động</Text>
-                            <TouchableOpacity style={styles.addBtn} onPress={addBearingItem}>
-                                <Text style={styles.addBtnText}>+ Thêm</Text>
-                            </TouchableOpacity>
+                            {!isReadOnly && (
+                                <TouchableOpacity style={styles.addBtn} onPress={addBearingItem}>
+                                    <Text style={styles.addBtnText}>+ Thêm</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
 
                         {bearingItems.length === 0 ? <Text style={styles.helperText}>Chưa có ổ truyền động nào. Nhấn + Thêm để bắt đầu.</Text> : null}
@@ -429,9 +462,11 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                             <View key={item.id} style={styles.dynamicItemCard}>
                                 <View style={styles.dynamicItemHeader}>
                                     <Text style={styles.dynamicItemTitle}>Ổ truyền động #{idx + 1}</Text>
-                                    <TouchableOpacity onPress={() => removeBearingItem(item.id)}>
-                                        <Text style={styles.removeText}>Xóa</Text>
-                                    </TouchableOpacity>
+                                    {!isReadOnly && (
+                                        <TouchableOpacity onPress={() => removeBearingItem(item.id)}>
+                                            <Text style={styles.removeText}>Xóa</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
 
                                 <Text style={styles.inputLabel}>Loại ổ</Text>
@@ -441,6 +476,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                                             key={`${item.id}-${option}`}
                                             style={[styles.pill, item.type === option && styles.pillActive]}
                                             onPress={() => updateBearingItem(item.id, { type: option })}
+                                            disabled={isReadOnly}
                                         >
                                             <Text style={[styles.pillText, item.type === option && styles.pillTextActive]}>{option}</Text>
                                         </TouchableOpacity>
@@ -473,7 +509,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
 
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.submitButton} onPress={validateAndCalculate}>
-                    <Text style={styles.submitButtonText}>Calculate Requirement</Text>
+                    <Text style={styles.submitButtonText}>{isReadOnly ? "Tiếp tục xem chi tiết" : "Calculate Requirement"}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -501,7 +537,7 @@ export default function InputScreen({ navigation }: InputScreenProps) {
                     </View>
                 </View>
             </Modal>
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -555,5 +591,8 @@ const styles = StyleSheet.create({
     btnCancel: { flex: 1, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#d1d5db', alignItems: 'center' },
     btnCancelText: { color: '#374151', fontWeight: '600', fontSize: 15 },
     btnConfirm: { flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#2563eb', alignItems: 'center' },
-    btnConfirmText: { color: '#fff', fontWeight: '600', fontSize: 15 }
+    btnConfirmText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+    textInputDisabled: { backgroundColor: '#f3f4f6', color: '#6b7280' },
+    readOnlyBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', padding: 12, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#bfdbfe' },
+    readOnlyText: { marginLeft: 8, fontSize: 13, color: '#1d4ed8', fontWeight: '500', flex: 1 }
 });

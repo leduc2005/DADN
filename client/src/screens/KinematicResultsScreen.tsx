@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useProjectState } from '../store/projectState';
 
 export default function KinematicResultsScreen({ route, navigation }: any) {
@@ -58,7 +59,7 @@ export default function KinematicResultsScreen({ route, navigation }: any) {
   ], [motorPower, nDc, uNgoai, uGear1, uGear2, uHop, systemTransmission]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹</Text>
@@ -134,7 +135,7 @@ export default function KinematicResultsScreen({ route, navigation }: any) {
           <Text style={styles.continueButtonText}>Tiếp tục — Thiết kế Bộ truyền Đai</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
