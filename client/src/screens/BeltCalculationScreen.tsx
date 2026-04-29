@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { calculateBeltTransmission } from '../logic/calc_belt';
 import { useProjectState } from '../store/projectState';
 
@@ -42,7 +43,7 @@ export default function BeltCalculationScreen({ route, navigation }: any) {
     : [];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹</Text>
@@ -159,7 +160,7 @@ export default function BeltCalculationScreen({ route, navigation }: any) {
           <Text style={styles.continueButtonText}>Tiếp tục — Thiết kế Bánh Răng</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

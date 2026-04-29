@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { calc_system_transmission, DriveCalcItem, BearingCalcItem, SystemTransmissionResult } from '../logic/calc_motor';
 import { runMotorSelectionAndDynamics } from '../logic/validation';
 import { searchMotor } from '../services/motor';
@@ -65,12 +66,18 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
   const [loadingMotors, setLoadingMotors] = useState(false);
   const [motorError, setMotorError] = useState<string | null>(null);
 
-  const { saveMotorResult } = useProjectState();
+  const { saveMotorResult, isReadOnly, savedSessions, currentSessionId } = useProjectState();
+
+  // Tìm kiếm motor đã được chọn trong lịch sử
+  const savedSession = savedSessions.find(s => s.id === currentSessionId);
+  const savedMotorModel = savedSession?.motorModel;
 
   useEffect(() => {
     let cancelled = false;
 
     const loadMotors = async () => {
+      // Cho phép lấy API bình thường để hiển thị các lựa chọn đề xuất
+
       if (!(calculatedPower > 0 && requiredSpeed > 0)) {
         setMotors(normalizedFallbackMotors);
         return;
@@ -87,11 +94,41 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
           ? response.items.map(normalizeMotor)
           : [];
 
-        setMotors(apiMotors.length > 0 ? apiMotors : normalizedFallbackMotors);
+        let finalMotors = apiMotors.length > 0 ? apiMotors : [...normalizedFallbackMotors];
+
+        if (isReadOnly && savedSession) {
+          const historicalMotor: ScreenMotor = {
+            id: 'historical-' + (savedSession.motorModel || 'unknown'),
+            model: savedSession.motorModel || 'Không rõ',
+            power: savedSession.motorPower || 0,
+            speed: savedSession.nDc || 0,
+            motorType: 'Dữ liệu Lịch sử',
+            torqueRatio: 2.2,
+          };
+          if (!finalMotors.find(m => m.model === historicalMotor.model)) {
+            finalMotors = [historicalMotor, ...finalMotors];
+          }
+        }
+
+        setMotors(finalMotors);
       } catch (error) {
         if (cancelled) return;
         setMotorError('Không thể tải danh sách motor từ server. Đang dùng dữ liệu hiện có.');
-        setMotors(normalizedFallbackMotors);
+        let fallback = [...normalizedFallbackMotors];
+        if (isReadOnly && savedSession) {
+          const historicalMotor: ScreenMotor = {
+            id: 'historical-' + (savedSession.motorModel || 'unknown'),
+            model: savedSession.motorModel || 'Không rõ',
+            power: savedSession.motorPower || 0,
+            speed: savedSession.nDc || 0,
+            motorType: 'Dữ liệu Lịch sử',
+            torqueRatio: 2.2,
+          };
+          if (!fallback.find(m => m.model === historicalMotor.model)) {
+            fallback = [historicalMotor, ...fallback];
+          }
+        }
+        setMotors(fallback);
       } finally {
         if (!cancelled) {
           setLoadingMotors(false);
@@ -104,7 +141,33 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
     return () => {
       cancelled = true;
     };
-  }, [calculatedPower, normalizedFallbackMotors, requiredSpeed]);
+  }, [calculatedPower, normalizedFallbackMotors, requiredSpeed, isReadOnly]);
+
+  useEffect(() => {
+    console.log('[MotorSelectionScreen] isReadOnly:', isReadOnly, 'savedSession:', !!savedSession, 'sessionId:', currentSessionId);
+    if (isReadOnly && savedSession) {
+      // Dựng lại motor từ lịch sử (bỏ qua việc có tìm thấy trong API hay không)
+      if (!selectedMotor) {
+        console.log('[MotorSelectionScreen] Reconstructing motor:', savedSession.motorModel);
+        const historicalMotor: ScreenMotor = {
+          id: 'historical-' + (savedSession.motorModel || 'unknown'),
+          model: savedSession.motorModel || 'Không rõ',
+          power: savedSession.motorPower || 0,
+          speed: savedSession.nDc || 0,
+          motorType: 'Dữ liệu Lịch sử',
+          torqueRatio: 2.2,
+        };
+        setSelectedMotor(historicalMotor);
+        
+        // Không cần đẩy vào setMotors ở đây nữa vì loadMotors đã xử lý
+      }
+
+      // Khôi phục kết quả truyền động để hiện nút "Tiếp tục"
+      if (!systemTransmission && savedSession.systemTransmission) {
+        setSystemTransmission(savedSession.systemTransmission);
+      }
+    }
+  }, [isReadOnly, savedSession, selectedMotor, systemTransmission]);
 
   const systemEta = Array.isArray(driveItem) && driveItem.length > 0
     ? driveItem.reduce((accumulator: number, item: any) => {
@@ -168,7 +231,7 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigate('input')} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹</Text>
@@ -272,9 +335,11 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
                   <Text style={styles.motorTitle}>Model: {motor.model}</Text>
                   <TouchableOpacity
                     onPress={() => handleSelectMotor(motor)}
+                    disabled={isReadOnly}
                     style={[
                       styles.selectButton,
                       isSelected ? styles.selectButtonSelected : styles.selectButtonDefault,
+                      isReadOnly && styles.selectButtonDisabled,
                     ]}
                   >
                     <Text
@@ -416,7 +481,7 @@ export default function MotorSelectionScreen({ navigation, route }: MotorSelecti
           </TouchableOpacity>
         </View>
       ) : null}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -526,7 +591,8 @@ const styles = StyleSheet.create({
   specList: { gap: 8 },
   specRow: { flexDirection: 'row', alignItems: 'center' },
   specLabel: { width: 110, color: '#6b7280', fontSize: 14 },
-  specValue: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  specValue: { fontSize: 13, fontWeight: '600', color: '#111827', textAlign: 'right', flexShrink: 1 },
+  selectButtonDisabled: { opacity: 0.5 },
   transmissionBlock: {
     marginTop: 16,
     borderRadius: 12,
