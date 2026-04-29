@@ -7,6 +7,10 @@
       "ios",
       "android",
       "web"
+    ],
+    "plugins": [
+      "expo-secure-store",
+      "expo-sqlite"
     ]
   }
 }
