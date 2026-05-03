@@ -1,20 +1,82 @@
-# ĐỀ XUẤT: KIẾN TRÚC LUỒNG DỮ LIỆU (DATA FLOW) VÀ API CONTRACT
+# 📜 ĐỀ XUẤT KIẾN TRÚC HYBRID & API CONTRACT
+**Dự án:** Ứng dụng Thiết kế Hệ dẫn động thùng trộn
 
-**Mục tiêu:** Đáp ứng được tính năng Offline (mang app vào xưởng/thư viện không có mạng vẫn tính toán được).
+---
 
-Hiện tại thư mục `server/` đang gánh việc tính toán (`strategies/` đai dẹt, đai thang). Nếu để đây thì khi mất mạng, app sẽ bị lỗi. Dưới đây là phân công trách nhiệm (Contract) lại giữa Frontend và Backend để giải quyết bài toán này:
+## 🏗️ PHẦN 1: ĐỀ XUẤT KIẾN TRÚC LUỒNG DỮ LIỆU (DATA FLOW)
+Để đáp ứng được tính năng **Offline-First** (mang App vào xưởng thực hành hoặc thư viện không có WiFi vẫn tính toán mượt mà), mình đề xuất tinh chỉnh lại kiến trúc mà Admin đã setup trên thư mục gốc.
 
-## 1. Chuyển "Bộ não tính toán" về Client
-Bê toàn bộ thư mục logic tính toán cơ khí (như `strategies`) từ Backend ném sang thư mục `client/src/utils/` hoặc `client/src/logic/`. 
-Nhờ vậy, App Mobile sẽ tự lấy số liệu Input ($P, n, L$) do người dùng nhập để tính ra kết quả ngay trên vi xử lý của điện thoại mà **không cần gọi API** thực thi phép toán.
+Hiện tại, thư mục `server/` đang gánh việc tính toán (VD: `strategies/` đai dẹt, đai thang). Nếu giữ nguyên, chỉ cần rớt mạng là App sẽ "liệt". Đề xuất điều chỉnh 3 điểm sau:
 
-## 2. Thêm Local Database cho Client
-Tạo thêm thư mục `client/src/database/` để nhúng sẵn file JSON/SQLite. Khối dữ liệu này sẽ chứa các **bảng tra linh kiện tĩnh** (như thông số tiêu chuẩn của động cơ, hệ số ổ lăn). App sẽ tra cứu thẳng vào file này cực kỳ nhanh.
+1. **Chuyển "Bộ não tính toán" về Client:** Bê toàn bộ thư mục logic tính toán cơ khí từ Backend sang Frontend (như `client/src/utils/` hoặc `client/src/logic/`). App Mobile sẽ tự lấy số $P, n, L$ và kiểm tra hợp lệ ngay trên thiết bị mà **không cần gọi API**.
+2. **Thêm Local Database cho Client:** Tạo thêm thư mục `client/src/database/` để nhúng sẵn file JSON/SQLite. Chứa các bảng tra linh kiện tĩnh (Động cơ, Ổ lăn).
+3. **Đổi vai trò của Backend:** Thư mục `server/` bây giờ sẽ được tối ưu siêu nhẹ. Chỉ tập trung vào 3 việc: 
+   * Lưu trữ Lịch sử tính toán (Nhận data đã tính xong từ Mobile bắn lên).
+   * Xác thực User (Đăng nhập/Đăng ký).
+   * Làm trạm trung chuyển gọi API Chatbot AI (Gemini).
 
-## 3. Đổi vai trò của Backend (Server)
-Thư mục `server/` bây giờ sẽ cực kỳ nhẹ nhàng. Bản hợp đồng (Contract) gọi API lúc này nhường lại toàn bộ phần tính toán cho Mobile, Server chỉ tập trung cung cấp các API cho:
-- **Lưu trữ History:** Nhận data tổng hợp đã tính xong từ Mobile bắn lên thông qua tiến trình đồng bộ ngầm khi có mạng.
-- **Xác thực User:** API Đăng ký / Đăng nhập.
-- **Microservices phụ:** Trạm trung chuyển gọi API Chatbot Gemini (ẩn API Key an toàn trên server).
+---
 
-> **Kết luận:** Contract mới quy định - Backend là cái kho lưu trữ đồng bộ, Frontend mới là cỗ máy tính toán.
+## 🌐 PHẦN 2: API CONTRACT (GIAO KÈO DỮ LIỆU ĐỒNG BỘ FE - BE)
+
+*(Lưu ý: Vì toàn bộ logic kiểm tra đúng/sai đã được xử lý Offline ở Frontend, API này chỉ dùng để "Đồng bộ nền" dự án đã tính toán xong lên Server).*
+
+### API 1: Đồng bộ Dự án (Upsert Sync)
+* **Mục đích:** Đẩy dữ liệu dự án lên Server. Nếu `sessionId` đã tồn tại thì ghi đè, chưa có thì tạo mới (Cơ chế Upsert).
+* **Endpoint:** `POST /api/sync/project`
+* **Xác thực:** Yêu cầu header `Authorization: Bearer <token>`
+* **Định dạng Payload:** `JSON` (Chuẩn `camelCase`)
+
+#### 1. Request Payload (Frontend gửi lên Backend)
+```json
+{
+  "sessionId": "b4a7b8f9-e4b0-1234-5678-9abc",
+  "name": "Đồ án Động cơ băng tải",
+  "status": "HOÀN THÀNH",
+  "inputData": {
+    "calculateSession": "Đồ án Động cơ băng tải",
+    "operatingData": { "power": "8.5", "speed": "65", "serviceLife": "10" },
+    "loadData": { "loadType": "Tải va đập nhẹ", "workShifts": "2" },
+    "driveItems": [],
+    "bearingItems": []
+  },
+  "resultData": {
+    "systemTransmission": { "uHop": 3.1, "uNgoai": 2.5 },
+    "beltResult": null,
+    "gearResult": null
+  },
+  "createdAt": "2026-05-03T10:00:00.000Z"
+}
+```
+
+#### 2. Response Payload
+**Thành công (200 OK):**
+```json
+{
+  "message": "Đồng bộ thành công!",
+  "sessionId": "b4a7b8f9-e4b0-1234-5678-9abc"
+}
+```
+
+**Lỗi Token Hết Hạn (401 Unauthorized):**
+Client nhận được sẽ không xóa dữ liệu offline, mà chờ người dùng đăng nhập lại.
+```json
+{
+  "message": "Token không hợp lệ hoặc đã hết hạn!"
+}
+```
+
+---
+
+### API 2: Xóa Đồng Bộ (Delete Sync)
+* **Mục đích:** Đồng bộ hành động xóa của người dùng từ Offline lên Cloud.
+* **Endpoint:** `DELETE /api/sync/project/:sessionId`
+* **Xác thực:** Yêu cầu header `Authorization: Bearer <token>`
+
+#### Response Payload
+**Thành công (200 OK):**
+```json
+{
+  "message": "Xóa thành công!"
+}
+```
