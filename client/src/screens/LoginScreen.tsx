@@ -20,7 +20,7 @@ export default function LoginScreen({ navigation }: any) {
       setAuthToken(token);                        // Gắn token vào Axios header
       login(user, token);                         // Lưu vào Zustand (RAM)
       await saveAuthToSecureStore(token, user);   // ✅ Lưu vào SecureStore (bộ nhớ bảo mật)
-      navigation.navigate('HomeScreen');          // Chuyển sang Màn hình chính
+      navigation.replace('Home');          // Chuyển sang Màn hình chính (Dùng replace để không back lại được màn hình Login)
     } catch (error: any) {
       Alert.alert('Đăng nhập thất bại', error.response?.data?.message || 'Máy chủ không phản hồi');
     }
