@@ -15,6 +15,7 @@ export const BASE_URL = Platform.OS === 'android' && LOCAL_IP === '192.168.123.1
 
 export const api = axios.create({
   baseURL: BASE_URL,
+  timeout: 8000, // 8 giây timeout
   headers: {
     'Content-Type': 'application/json',
   },

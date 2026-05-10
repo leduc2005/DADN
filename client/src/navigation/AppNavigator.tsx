@@ -12,10 +12,13 @@ import MotorSelectionScreen from '../screens/MotorSelectionScreen';
 import KinematicResultsScreen from '../screens/KinematicResultsScreen';
 import BeltCalculationScreen from '../screens/BeltCalculationScreen';
 import GearCalculationScreen from '../screens/GearCalculationScreen';
+import { useSyncEngine } from '../hooks/useSyncEngine';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
+  useSyncEngine(); // <-- Kích hoạt Module 3: Offline-First Sync Engine
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>

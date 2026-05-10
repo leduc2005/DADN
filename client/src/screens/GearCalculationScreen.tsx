@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { calculateGearFull } from '../logic/calc_gear';
 import { useProjectState } from '../store/projectState';
+import { saveProjectLocal } from '../database/sqlite';
+import { runFullSync } from '../services/api_sync';
 
 export default function GearCalculationScreen({ route, navigation }: any) {
   const state = route.params || {};
@@ -14,7 +17,76 @@ export default function GearCalculationScreen({ route, navigation }: any) {
     inputData = {},
   } = state;
 
-  const { saveGearResult, finishSession } = useProjectState();
+  const {
+    saveGearResult,
+    finishSession,
+    calculateSession,
+    operatingData,
+    loadData,
+    efficiencyData,
+    driveItems,
+    bearingItems,
+    isReadOnly,
+  } = useProjectState();
+  const [showSaveModal, setShowSaveModal] = useState(false);
+
+  const handleFinish = () => {
+    if (isReadOnly) {
+      navigation.navigate('Home');
+      return;
+    }
+    if (sessionId) finishSession(sessionId);
+    setShowSaveModal(true);
+  };
+
+  const handleSave = () => {
+    try {
+      const fullInputData = {
+        operatingData: inputData?.operatingData,
+        loadData: inputData?.loadData,
+        driveItems: inputData?.item?.driveItem || inputData?.Item?.driveItem,
+        bearingItems: inputData?.item?.bearingItem || inputData?.Item?.bearingItem,
+        motorModel: state.motorModel,
+        motorPower,
+        nDc,
+        uHop,
+        uNgoai,
+        rawInputData: {
+          calculateSession,
+          operatingData,
+          loadData,
+          efficiencyData,
+          driveItems,
+          bearingItems,
+        },
+      };
+      const fullResultData = {
+        systemTransmission: state.systemTransmission,
+        beltResult: state.beltResult,
+        gearResult: gearResult?.error ? null : gearResult,
+      };
+      const projectName = calculateSession?.trim() || `Tính toán - ${state.motorModel || 'Chưa đặt tên'}`;
+      saveProjectLocal(
+        sessionId,
+        projectName,
+        fullInputData,
+        fullResultData,
+        'HOÀN THÀNH',
+      );
+
+      // Kích hoạt đồng bộ ngầm ngay lập tức
+      runFullSync().catch(err => console.warn('Lỗi trigger sync sau khi lưu:', err));
+    } catch (e) {
+      console.error('Lỗi lưu bài toán:', e);
+    }
+    setShowSaveModal(false);
+    navigation.navigate('Home');
+  };
+
+  const handleSkipSave = () => {
+    setShowSaveModal(false);
+    navigation.navigate('Home');
+  };
 
   const efficiencyBelt = 0.96;
   const n1_rpm = nDc / Math.max(uNgoai, 1);
@@ -49,7 +121,7 @@ export default function GearCalculationScreen({ route, navigation }: any) {
   const bending = gearResult?.step5_bendingCheck;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹</Text>
@@ -154,17 +226,29 @@ export default function GearCalculationScreen({ route, navigation }: any) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          onPress={() => {
-            if (sessionId) finishSession(sessionId);
-            navigation.navigate('Home');
-          }}
-          style={styles.finishButton}
-        >
-          <Text style={styles.finishButtonText}>✅ Hoàn tất — Về Trang chủ</Text>
+        <TouchableOpacity onPress={handleFinish} style={styles.finishButton}>
+          <Text style={styles.finishButtonText}>{isReadOnly ? "Thoát" : "✅ Hoàn tất — Về Trang chủ"}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+
+      {/* Popup xác nhận lưu */}
+      <Modal visible={showSaveModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Lưu tính toán?</Text>
+            <Text style={styles.modalMessage}>Bạn có muốn lưu bài toán này vào lịch sử không?</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity onPress={handleSkipSave} style={styles.modalBtnSkip}>
+                <Text style={styles.modalBtnSkipText}>Không</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSave} style={styles.modalBtnSave}>
+                <Text style={styles.modalBtnSaveText}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
@@ -229,4 +313,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981', alignItems: 'center', justifyContent: 'center',
   },
   finishButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  // ── Modal popup styles ──
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  modalBox: {
+    backgroundColor: '#fff', borderRadius: 20, padding: 28,
+    width: '82%', alignItems: 'center',
+    shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 }, elevation: 10,
+  },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  modalMessage: { fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  modalButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+  modalBtnSkip: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1.5, borderColor: '#d1d5db', alignItems: 'center',
+  },
+  modalBtnSkipText: { fontSize: 15, fontWeight: '600', color: '#6b7280' },
+  modalBtnSave: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    backgroundColor: '#2563eb', alignItems: 'center',
+    shadowColor: '#2563eb', shadowOpacity: 0.3, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 }, elevation: 5,
+  },
+  modalBtnSaveText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

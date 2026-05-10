@@ -28,11 +28,12 @@ DADN/
     ├── src/
     │   ├── components/             # UI Reusable (Nút bấm, Form, Dialog...)
     │   ├── database/               # 📦 LỚP DATA: Chứa SQLite/JSON (Bảng tra ổ lăn, động cơ...)
+    │   ├── hooks/                  # Custom hooks (VD: useSyncEngine.ts chạy ngầm)
     │   ├── logic/                  # 🧠 LỚP NÃO: Các hàm toán học tính toán cơ khí (Offline)
     │   ├── navigation/             # Điều hướng chuyển màn hình (React Navigation)
-    │   ├── screens/                # 🎨 LỚP UI: Giao diện màn hình (NhapLieu, DongCo, BanhRang)
+    │   ├── screens/                # 🎨 LỚP UI: Giao diện màn hình (InputScreen, MotorSelectionScreen, GearCalculationScreen)
     │   ├── services/               # Cấu hình gọi API đồng bộ lên Backend (Axios/api.ts)
-    │   └── store/                  # 🔄 LỚP STATE: Quản lý biến toàn cục P, n, L (Zustand)
+    │   └── store/                  # 🔄 LỚP STATE: Quản lý biến toàn cục P, n, L, isReadOnly (Zustand)
     │
     ├── App.tsx                     # Điểm khởi chạy App Mobile (TypeScript)
     ├── app.json                    # Cấu hình Expo
@@ -41,41 +42,105 @@ DADN/
 ```
 ---
 
-## 🚀 HƯỚNG DẪN SETUP & CHẠY THỬ (Dành cho Devs)
+## 🚀 HƯỚNG DẪN SETUP & CHẠY THỬ 
 
-Để chạy dự án với Kiến trúc 4-Layer mới một cách trơn tru, bạn cần mở **2 Tab Terminal** trong VS Code và làm theo thứ tự sau:
+Nếu bạn không rành về code, hãy bình tĩnh làm theo **chính xác từng bước một** dưới đây.
 
-### 📱 BƯỚC 1: KHỞI ĐỘNG FRONTEND (REACT NATIVE / EXPO)
-Ở cửa sổ Terminal thứ 1, gõ lần lượt:
-```bash
-cd DADN/client
+### 🛠️ GIAI ĐOẠN 0: CHUẨN BỊ MÔI TRƯỜNG
+1. **Cài đặt Node.js:** Truy cập trang [nodejs.org](https://nodejs.org/), tải và cài đặt phiên bản **LTS** (Long Term Support). Cứ bấm Next cho đến khi hoàn tất.
+2. **Cài đặt Expo Go:** Lên kho ứng dụng App Store (iPhone) hoặc CH Play (Android), tìm và tải ứng dụng có tên **Expo Go** về điện thoại.
+3. **Mở dự án:** Bật ứng dụng **Visual Studio Code (VS Code)**, chọn `File` > `Open Folder` và chọn thư mục `DADN`.
+4. Mở cửa sổ gõ lệnh (Terminal) trong VS Code bằng cách bấm phím tắt: `` Ctrl + ` `` (dấu huyền ngay dưới nút ESC).
 
-# Tải bộ thư viện sửa lỗi xung đột (quan trọng)
-npm install --legacy-peer-deps
+---
 
-# Khởi chạy Expo kèm lệnh -c (Clear Cache) để xoá bộ nhớ đệm cũ
-npx expo start -c
-```
-*Lấy ứng dụng Expo Go trên điện thoại quét mã QR để mở App.*
+### 🖥️ GIAI ĐOẠN 1: KHỞI ĐỘNG MÁY CHỦ (SERVER / BACKEND)
+Máy chủ là nơi lưu trữ cơ sở dữ liệu và xử lý đăng nhập, bạn phải bật nó lên trước.
 
-### 🖥️ BƯỚC 2: KHỞI ĐỘNG BACKEND (SERVER)
-Ở cửa sổ Terminal thứ 2, gõ lần lượt:
+**Bước 1:** Trong khung Terminal của VS Code, gõ lệnh sau để đi vào thư mục server:
 ```bash
 cd DADN/server
-
-# Cài đặt thư viện Backend
-npm install
-
-# Khởi chạy server API ngầm
-npm start 
-# hoặc gõ: node server.js
 ```
 
-> **🔥 QUAN TRỌNG: CÁCH SET IP KHI CHẠY EXPO GO**
-> Nếu bạn test vòng lặp Đăng nhập/Đăng ký trên điện thoại thật thì phải cấu hình Local IP:
-> 1. Gõ `ipconfig` ở Terminal, tìm dãy số **IPv4 Address** (vd: `192.168.1.144`).
-> 2. Mở file `client/src/services/api.ts` dòng số 9, điền IP vào biến `LOCAL_IP`.
-> 3. Mở file `client/src/services/api_sync.ts` sửa IP ở biến `BASE_URL`.
+**Bước 2:** Cài đặt các thư viện cần thiết bằng lệnh:
+```bash
+npm install
+```
+
+**Bước 3: Tạo file cấu hình bảo mật (`.env`) - BẮT BUỘC**
+- Nhìn sang cột danh sách file bên trái, **click chuột phải vào thư mục `server`** -> Chọn **New File**.
+- Đặt tên file chính xác là: **`.env`** (có dấu chấm ở đầu, không viết hoa).
+- Copy toàn bộ nội dung dưới đây và dán vào file `.env` vừa tạo, sau đó bấm `Ctrl + S` để lưu lại:
+```env
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/DADN_Database
+JWT_SECRET=your_jwt_secret_key_here
+
+# Dành cho chức năng Quên Mật Khẩu (Gửi OTP qua email)
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_google_app_password
+```
+*(Ghi chú: Nếu bạn muốn test tính năng Quên mật khẩu, hãy lên Google tìm cách "Tạo mật khẩu ứng dụng Gmail" gồm 16 chữ số và dán vào phần `EMAIL_PASS`, tuyệt đối không dùng mật khẩu đăng nhập Gmail thường).*
+
+**Bước 4:** Bật máy chủ lên bằng lệnh:
+```bash
+npm start
+```
+*Nếu bạn thấy chữ "Server is running on port 5000" hiện ra là bạn đã thành công! Cứ để nguyên Terminal đó không được tắt.*
+
+---
+
+### 📱 GIAI ĐOẠN 2: KHỞI ĐỘNG ỨNG DỤNG ĐIỆN THOẠI (CLIENT / FRONTEND)
+
+**Bước 1:** Bấm vào **dấu cộng (+)** ở góc phải khung Terminal để mở thêm một cửa sổ Terminal thứ 2. Gõ lệnh sau để đi vào thư mục client:
+```bash
+cd DADN/client
+```
+
+**Bước 2: Cấu hình địa chỉ mạng LAN (CỰC KỲ QUAN TRỌNG)**
+Để điện thoại và máy tính của bạn "nhìn thấy nhau", bạn phải cung cấp địa chỉ IP của máy tính cho App:
+- Gõ lệnh `ipconfig` (nếu dùng Windows) hoặc `ifconfig` (nếu dùng Mac) vào Terminal rồi bấm Enter.
+- Tìm đến dòng có chữ **IPv4 Address**, bạn sẽ thấy một dãy số (Ví dụ: `192.168.1.144`). Hãy copy hoặc nhớ dãy số này.
+- Mở file `client/src/services/api.ts` -> Tại dòng số 9, sửa biến `LOCAL_IP` thành số IP của bạn.
+- Mở file `client/src/services/api_sync.ts` -> Sửa số IP trong biến `BASE_URL` thành IP của bạn.
+*(Lưu ý: Điện thoại và máy tính PHẢI kết nối chung 1 mạng Wifi).*
+
+**Bước 3:** Cài đặt thư viện cho App điện thoại:
+```bash
+# Bắt buộc phải có đuôi --legacy-peer-deps để tránh lỗi xung đột phiên bản
+npm install --legacy-peer-deps
+```
+
+**Bước 4:** Bật ứng dụng lên bằng lệnh:
+```bash
+npx expo start -c
+```
+Lúc này trên màn hình máy tính sẽ hiện ra một cái **Mã QR khổng lồ**.
+
+**Bước 5:** 
+- Mở ứng dụng **Expo Go** trên điện thoại của bạn.
+- Chọn nút **Scan QR code** (Quét mã QR) và chĩa camera vào màn hình máy tính.
+- Đợi khoảng 1-2 phút để ứng dụng tải dữ liệu lần đầu tiên (building bundles). Chúc mừng bạn đã vào được App!
+
+---
+
+## 🎯 TỔNG QUAN 3 MODULE TÍNH NĂNG CHÍNH ĐÃ HOÀN THÀNH
+
+App được thiết kế theo luồng quy trình đồ án chi tiết máy, chia làm 3 Module cốt lõi liên kết chặt chẽ với nhau:
+
+1. **Module 1 - Thu thập Thông số Đầu vào:**
+   - Tiếp nhận các thông số gốc (Công suất P, Vòng quay n, Tuổi thọ L) và Điều kiện tải.
+   - Thêm/Xóa động linh hoạt các Bộ truyền động (Đai, Răng trụ, Trục vít...) và Ổ truyền động. Hệ thống tự động validation dữ liệu và áp dụng các thông số chuẩn (hiệu suất η, tỉ số truyền u).
+
+2. **Module 2 - Tính toán & Lựa chọn Động cơ:**
+   - App tự động phân tích Module 1, tính toán Công suất yêu cầu (Pct) và Tốc độ đồng bộ (Nsb).
+   - Truy vấn Offline (Data cục bộ) và Online (Gọi API từ Server) để đưa ra danh sách đề xuất Động cơ phù hợp nhất.
+   - Tự động phân phối tỉ số truyền (uHop, uNgoai) và tính toán sai số động học.
+
+3. **Module 3 - Quản lý Lịch sử & Đồng bộ Offline-First:**
+   - **Offline-First:** Mọi bài toán sau khi tính xong đều được nén lại (serialize) và lưu ngay vào Database SQLite cục bộ trên điện thoại.
+   - **Background Sync Engine:** Tự động đồng bộ ngầm các bài toán lên mây (MongoDB) khi có mạng.
+   - **Bảo vệ toàn vẹn dữ liệu (Read-Only Mode):** Khi mở lại một lịch sử cũ từ trang chủ, hệ thống sẽ tự động khôi phục giao diện, khóa cứng (disable) toàn bộ các form nhập liệu, bôi đậm động cơ đã chọn và hiển thị kết quả cũ để đảm bảo tính lịch sử không bị bóp méo.
 
 ---
 
@@ -86,7 +151,7 @@ npm start
 | **`src/screens/`** | 🎨 **Chỉ vẽ giao diện.** File trong này tuyệt đối không chứa các phép toán cộng trừ nhân chia hay IF/ELSE kiểm tra ngưỡng vật lý. Nó chỉ lấy dữ liệu từ store để in ra màn hình. |
 | **`src/store/`** | 🔄 **Trạm trung chuyển dữ liệu (Zustand).** Nơi chứa bộ nhớ tạm của App. Input người dùng gõ vào sẽ lưu ở đây. Các màn hình khác muốn lấy số liệu để tính toán phải truy cập vào file này. |
 | **`src/logic/`** | 🧠 **Bộ não tính toán cơ khí.** Chứa toàn bộ công thức đồ án (ví dụ: `calc_motor.ts`, `calc_belt.ts`). Nhận đầu vào là số, nhổ đầu ra là số. File ở đây hoàn toàn độc lập về giao diện. |
-| **`src/database/`** | 📚 **Bách khoa toàn thư Local.** Chứa file `sqlite.db` hoặc `data_dongco.json`. Khi `src/logic/` cần tìm động cơ hợp lệ, nó sẽ truy vấn vào thư mục này để lấy dữ liệu (tốc độ < 1ms) mà không cần mạng. |
+| **`src/database/`** | 📚 **Bách khoa toàn thư Local.** Chứa file `sqlite.ts`. Khi `src/logic/` cần tìm động cơ hợp lệ, nó sẽ truy vấn vào đây để lấy dữ liệu (tốc độ < 1ms) mà không cần mạng. Ngoài ra còn lưu trữ các dự án Offline. |
 
 ---
 
@@ -119,15 +184,16 @@ Xử lý đồng bộ dữ liệu (Sync), xác thực người dùng (Auth) và 
 
 ---
 
-## 🔄 2. Luồng Đồng Bộ Dữ Liệu (Data Flow) - ĐỌC KỸ TRƯỚC KHI CODE
+## 🔄 Luồng Đồng Bộ Dữ Liệu (Data Flow) - ĐỌC KỸ TRƯỚC KHI CODE
 
 Dự án áp dụng nguyên tắc **Local-Write, Cloud-Sync** (Lưu cục bộ trước, Đồng bộ mây sau):
 
 ### Khi Offline:
-- User nhập liệu → `src/logic/` tính toán → Tra cứu linh kiện tại `src/database/` → Kết quả lưu tạm vào thiết bị với cờ `is_synced = false`.
+- User nhập liệu → `src/logic/` tính toán → Tra cứu linh kiện tại `src/database/` → Kết quả lưu tạm vào điện thoại (SQLite) với cờ `is_synced = false`.
 
 ### Khi Online:
-- App phát hiện có mạng → Gọi `api/v1/sync` trong thư mục `services/` → Gửi toàn bộ các dự án `is_synced = false` lên Backend → Backend lưu vào MongoDB và trả về HTTP 200 → Client chuyển cờ thành `is_synced = true`.
+- **Immediate Sync:** Khi người dùng bấm "Lưu" hoặc "Xóa" một bài toán, Trigger sẽ gọi API `/api/sync` đồng bộ tức thì lên Server.
+- **Background Sync:** Hook `useSyncEngine` chạy ngầm, phát hiện có mạng sẽ gom các dự án `is_synced = false` đẩy lên Backend. Backend lưu vào MongoDB và Client chuyển cờ thành `is_synced = true`.
 
 ---
 
@@ -141,10 +207,10 @@ Dự án áp dụng kiến trúc **4 lớp** để tách biệt rõ ràng các t
 Chỉ chứa các nút bấm, ô nhập liệu, biểu đồ. **Tuyệt đối KHÔNG chứa công thức tính toán.**
 
 #### Cấu trúc
-- **Screen_NhapLieu**: Giao diện cho Module 1.
-- **Screen_TinhDongCo**: Giao diện cho Module 2.
-- **Screen_TinhBanhRang**: Giao diện cho Module 3.
-- **Screen_Dashboard**: Màn hình vẽ biểu đồ tổng kết và nút xuất PDF.
+- **InputScreen**: Giao diện thu thập đầu vào.
+- **MotorSelectionScreen**: Giao diện hiển thị danh sách đề xuất động cơ.
+- **GearCalculationScreen**: Giao diện hiển thị kết quả kiểm nghiệm bền và tính toán bánh răng.
+- **HomeScreen**: Dashboard hiển thị danh sách lịch sử tính toán, quản lý đồng bộ và đăng xuất.
 
 ---
 
@@ -164,9 +230,9 @@ Lưu trữ dữ liệu tạm thời (Input của người dùng và Output của
 Chứa các file toán học, công thức cơ lý thuyết. Nhận số từ Lớp 2, tính toán, và trả kết quả lại cho Lớp 2.
 
 #### Cấu trúc
-- `utils/validation.js`: Hàm kiểm tra P, n, L có hợp lệ không.
-- `utils/calc_motor.js`: Chứa công thức tính công suất cần thiết, phân phối tỉ số truyền.
-- `utils/calc_gear.js`: Chứa công thức tính module, số răng bánh răng.
+- `utils/validation.ts`: Hàm kiểm tra P, n, L có hợp lệ không.
+- `logic/calc_motor.ts`: Chứa công thức tính công suất cần thiết, phân phối tỉ số truyền.
+- `logic/calc_gear.ts`: Chứa công thức tính module, số răng bánh răng.
 
 ---
 
@@ -176,11 +242,12 @@ Chứa các file toán học, công thức cơ lý thuyết. Nhận số từ L�
 Quản lý Database offline trên máy và gọi API lên Server.
 
 #### Cấu trúc (Frontend)
-- `database/sqlite_local.js`: Kết nối database bảng tra cơ khí trên máy tính/điện thoại.
+- `database/sqlite.ts`: Quản lý Local SQLite Database, lưu trữ offline lịch sử bài toán và cấu hình ổ lăn/bánh răng.
+- `hooks/useSyncEngine.ts`: Động cơ đồng bộ nền, tự động kết nối Backend.
 - `services/api_sync.ts`: Hàm quét các dự án đã xong để gửi lên Server.
 
 #### Cấu trúc (Backend - Server)
-- `NodeJS_Server/routes`: Hứng API từ FE.
-- `NodeJS_Server/controllers`: Xử lý lưu lịch sử vào MongoDB/PostgreSQL, kết nối Chatbot Gemini.
+- `routes/syncRoutes.js`: Hứng API đồng bộ từ FE (`/api/sync`).
+- `controllers/authController.js`: Xử lý lưu lịch sử, xác thực người dùng.
 
 > *Với cấu trúc này, sau này anh em muốn mở rộng ra làm Web, anh em chỉ cần giữ nguyên Lớp 2, Lớp 3, Lớp 4. Và chỉ việc code lại Lớp 1 thôi!*

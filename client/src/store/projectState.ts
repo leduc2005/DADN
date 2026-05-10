@@ -14,6 +14,14 @@ export interface CalculationSession {
   systemTransmission?: any;
   beltResult?: any;
   gearResult?: any;
+  rawInputData?: {
+    calculateSession: string;
+    operatingData: OperatingData;
+    loadData: LoadData;
+    efficiencyData: EfficiencyData;
+    driveItems: DriveItem[];
+    bearingItems: BearingItem[];
+  };
 }
 
 export type DriveType =
@@ -82,6 +90,7 @@ interface ProjectInputState {
   bearingItems: BearingItem[];
   // Kết quả tính toán của phiên hiện tại
   currentSessionId: string | null;
+  isReadOnly: boolean;
   savedSessions: CalculationSession[];
   saveMotorResult: (sessionId: string, data: Partial<CalculationSession>) => void;
   saveBeltResult: (sessionId: string, beltResult: any) => void;
@@ -98,6 +107,10 @@ interface ProjectInputState {
   updateBearingItem: (id: string, patch: Partial<BearingItem>) => void;
   removeBearingItem: (id: string) => void;
   resetInputState: () => void;
+  // Module 3: Quản lý lịch sử
+  loadSessionFromHistory: (session: CalculationSession) => void;
+  removeSession: (sessionId: string) => void;
+  setSavedSessions: (sessions: CalculationSession[]) => void;
 }
 
 const createId = () => `${Date.now()}-${Math.random()}`;
@@ -143,6 +156,7 @@ export const useProjectState = create<ProjectInputState>((set) => ({
   driveItems: [],
   bearingItems: [],
   currentSessionId: null,
+  isReadOnly: false,
   savedSessions: [],
 
   saveMotorResult: (sessionId, data) =>
@@ -295,5 +309,53 @@ export const useProjectState = create<ProjectInputState>((set) => ({
       efficiencyData: defaultEfficiencyData,
       driveItems: [],
       bearingItems: [],
+      currentSessionId: null,
+      isReadOnly: false,
     }),
+
+  // ── Module 3: Quản lý lịch sử ──────────────────────────────────────────────
+
+  /**
+   * Nạp dữ liệu từ lịch sử vào Store để xem lại / chỉnh sửa.
+   * Được gọi khi người dùng nhấn vào Card trên HomeScreen.
+   */
+  loadSessionFromHistory: (session) =>
+    set((state) => {
+      if (session.rawInputData) {
+        return {
+          currentSessionId: session.id,
+          isReadOnly: true,
+          calculateSession: session.rawInputData.calculateSession || session.title || '',
+          operatingData: session.rawInputData.operatingData || defaultOperatingData,
+          loadData: session.rawInputData.loadData || defaultLoadData,
+          efficiencyData: session.rawInputData.efficiencyData || defaultEfficiencyData,
+          driveItems: session.rawInputData.driveItems || [],
+          bearingItems: session.rawInputData.bearingItems || [],
+        };
+      }
+      // Fallback cho dữ liệu cũ không có rawInputData
+      return {
+        currentSessionId: session.id,
+        isReadOnly: true,
+        calculateSession: session.title || '',
+        operatingData: {
+          power: session.motorPower?.toString() || '',
+          speed: session.nDc?.toString() || '',
+          serviceLife: '',
+        },
+      };
+    }),
+
+  /**
+   * Xóa một session khỏi mảng savedSessions trong Zustand.
+   */
+  removeSession: (sessionId) =>
+    set((state) => ({
+      savedSessions: state.savedSessions.filter((s) => s.id !== sessionId),
+    })),
+
+  /**
+   * Thay thế toàn bộ savedSessions (dùng khi load từ SQLite lúc App khởi động).
+   */
+  setSavedSessions: (sessions) => set({ savedSessions: sessions }),
 }));
