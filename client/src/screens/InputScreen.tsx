@@ -903,17 +903,19 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Cấu hình Sơ đồ động</Text>
                         <View style={styles.gridContainer}>
-                            {etaConfigs.map((config) =>
-                                renderSmallInput(
-                                    config.label,
-                                    efficiencyData[config.key],
-                                    (val) =>
-                                        setEfficiencyField(
-                                            config.key,
-                                            sanitizeNumericInput(val, true),
-                                        ),
-                                ),
-                            )}
+                            {etaConfigs.map((config) => (
+                                <React.Fragment key={config.key}>
+                                    {renderSmallInput(
+                                        config.label,
+                                        efficiencyData[config.key],
+                                        (val) =>
+                                            setEfficiencyField(
+                                                config.key,
+                                                sanitizeNumericInput(val, true),
+                                            ),
+                                    )}
+                                </React.Fragment>
+                            ))}
                         </View>
                         <View style={[styles.gridContainer, { marginTop: 16 }]}>
                             {renderSmallInput('u Đai', efficiencyData.uBelt, (val) =>

@@ -8,9 +8,7 @@ import { Platform } from 'react-native';
 
 const LOCAL_IP = '192.168.123.10'; // <--- Thay IP của bạn vào đây khi test trên điện thoại
 
-export const BASE_URL = Platform.OS === 'android' && LOCAL_IP === '192.168.123.10'
-  ? 'http://10.0.2.2:5000/api'
-  : `http://${LOCAL_IP}:5000/api`;
+export const BASE_URL = `http://${LOCAL_IP}:5000/api`;
 
 
 export const api = axios.create({
