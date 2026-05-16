@@ -1,14 +1,191 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal, KeyboardAvoidingView, Platform } from "react-native";
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    StyleSheet,
+    ScrollView,
+    Modal,
+    KeyboardAvoidingView,
+    Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Info, AlertTriangle, XCircle } from "lucide-react-native";
-import { runMotorSuggestion } from "../logic/validation";
-import { BearingType, DriveType, useProjectState } from "../store/projectState";
+import { ChevronLeft, Info, AlertTriangle, XCircle } from 'lucide-react-native';
+import {
+    runMotorSuggestion,
+    validatePhysicalConstraints,
+    ValidationErrorType,
+} from '../logic/validation';
+import {
+    BearingType,
+    DriveType,
+    EfficiencyData,
+    useProjectState,
+} from '../store/projectState';
 
 interface InputScreenProps {
     route: any;
     navigation: any;
 }
+
+type InlineNumericField =
+    | 'power'
+    | 'speed'
+    | 'serviceLife'
+    | 'workShifts'
+    | 'workingDaysPerYear'
+    | 'hoursPerShift';
+
+type InlineErrorKey = InlineNumericField | 'loadType' | 'rotationDirection';
+
+const loadTypeOptions = ['Tải tĩnh', 'Tải va đập nhẹ', 'Tải va đập mạnh'];
+const rotationDirectionOptions = ['Quay 1 chiều', 'Quay 2 chiều'];
+const driveTypeOptions: DriveType[] = [
+    'Bánh răng trụ',
+    'Bánh răng côn',
+    'Trục vít tự hãm',
+    'Trục vít không tự hãm',
+    'Xích',
+    'Bánh ma sát',
+    'Đai',
+];
+const bearingTypeOptions: BearingType[] = ['Ổ lăn', 'Ổ trượt'];
+const bearingBrandOptions = ['SKF', 'NTN', 'Không chọn'];
+const zOptions: Array<'1' | '2' | '4'> = ['1', '2', '4'];
+
+const INLINE_NUMERIC_CONFIG: Record<
+    InlineNumericField,
+    {
+        label: string;
+        allowDecimal: boolean;
+        integerOnly?: boolean;
+        min: number;
+        max: number;
+        unit: string;
+    }
+> = {
+    power: {
+        label: 'Công suất (P)',
+        allowDecimal: true,
+        min: 0.1,
+        max: 150,
+        unit: 'kW',
+    },
+    speed: {
+        label: 'Vòng quay (n)',
+        allowDecimal: false,
+        integerOnly: true,
+        min: 10,
+        max: 2500,
+        unit: 'v/ph',
+    },
+    serviceLife: {
+        label: 'Thời gian phục vụ (L)',
+        allowDecimal: true,
+        min: 0.5,
+        max: 30,
+        unit: 'năm',
+    },
+    workShifts: {
+        label: 'Số ca làm việc',
+        allowDecimal: false,
+        integerOnly: true,
+        min: 1,
+        max: 4,
+        unit: 'ca',
+    },
+    workingDaysPerYear: {
+        label: 'Số ngày làm việc trong năm',
+        allowDecimal: false,
+        integerOnly: true,
+        min: 100,
+        max: 365,
+        unit: 'ngày',
+    },
+    hoursPerShift: {
+        label: 'Số giờ làm việc mỗi ca',
+        allowDecimal: false,
+        integerOnly: true,
+        min: 1,
+        max: 24,
+        unit: 'giờ',
+    },
+};
+
+const sanitizeNumericInput = (text: string, allowDecimal: boolean) => {
+    let cleaned = text.replace(/[^0-9.]/g, '');
+    if (!allowDecimal) {
+        return cleaned.replace(/\./g, '');
+    }
+    const [first, ...rest] = cleaned.split('.');
+    if (rest.length === 0) return cleaned;
+    return `${first}.${rest.join('')}`;
+};
+
+const validateInlineNumeric = (field: InlineNumericField, value: string) => {
+    const trimmed = value.trim();
+    const config = INLINE_NUMERIC_CONFIG[field];
+
+    if (!trimmed) {
+        return `${config.label} là bắt buộc.`;
+    }
+
+    const numeric = Number(trimmed);
+    if (!Number.isFinite(numeric)) {
+        return `${config.label} phải là số hợp lệ.`;
+    }
+
+    if (numeric <= 0) {
+        return `${config.label} phải lớn hơn 0.`;
+    }
+
+    if (config.integerOnly && !Number.isInteger(numeric)) {
+        return `${config.label} phải là số nguyên.`;
+    }
+
+    if (numeric < config.min || numeric > config.max) {
+        return `${config.label} phải nằm trong khoảng ${config.min} - ${config.max} ${config.unit}.`;
+    }
+
+    return '';
+};
+
+const isDriveForcedOpen = (type: DriveType) =>
+    type === 'Trục vít không tự hãm' || type === 'Đai';
+
+const getDriveEta = (type: DriveType, efficiencyData: EfficiencyData) => {
+    switch (type) {
+        case 'Đai':
+            return efficiencyData.etaBelt;
+        case 'Bánh răng côn':
+            return efficiencyData.etaBevelGear;
+        case 'Bánh răng trụ':
+            return efficiencyData.etaStraightGear;
+        case 'Trục vít tự hãm':
+            return efficiencyData.etaWormSelfLocking;
+        case 'Trục vít không tự hãm':
+            return efficiencyData.etaWormNonSelfLocking;
+        case 'Xích':
+            return efficiencyData.etaChain;
+        case 'Bánh ma sát':
+            return efficiencyData.etaFriction;
+        default:
+            return '';
+    }
+};
+
+const getBearingEta = (type: BearingType, efficiencyData: EfficiencyData) => {
+    switch (type) {
+        case 'Ổ lăn':
+            return efficiencyData.etaBearing;
+        case 'Ổ trượt':
+            return efficiencyData.etaSlidingBearing;
+        default:
+            return '';
+    }
+};
 
 export default function InputScreen({ route, navigation }: InputScreenProps) {
     const historySession = route.params?.historySession;
@@ -37,171 +214,115 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
         if (historySession) {
             loadSessionFromHistory(historySession);
         }
-    }, [historySession]);
+    }, [historySession, loadSessionFromHistory]);
 
-    const loadType = loadData.loadType;
-    const workShifts = loadData.workShifts;
+    const [inlineErrors, setInlineErrors] = useState<
+        Partial<Record<InlineErrorKey, string>>
+    >({});
 
     const [showErrorModal, setShowErrorModal] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
-    const [errorType, setErrorType] = useState<"empty" | "format" | "threshold">("empty");
-    const [errorSuggestion, setErrorSuggestion] = useState("");
+    const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [errorType, setErrorType] = useState<ValidationErrorType>('empty');
+    const [errorSuggestion, setErrorSuggestion] = useState('');
 
-    const loadTypeOptions = ["Tải êm", "Tải va đập nhẹ", "Tải va đập vừa", "Tải va đập nặng"];
-    const workShiftOptions = ["1 ca", "2 ca", "3 ca"];
-    const driveTypeOptions: DriveType[] = ["Bánh răng trụ", "Bánh răng côn", "Trục vít tự hãm", "Trục vít không tự hãm", "Xích", "Bánh ma sát", "Đai"];
-    const bearingTypeOptions: BearingType[] = ["Ổ lăn", "Ổ trượt"];
-    const zOptions: Array<"1" | "2" | "4"> = ["1", "2", "4"];
+    const setInlineError = (field: InlineErrorKey, message: string) => {
+        setInlineErrors((prev) => ({ ...prev, [field]: message }));
+    };
 
-    const isDriveForcedOpen = (type: DriveType) => type === "Trục vít không tự hãm" || type === "Đai";
+    const updateNumericField = (field: InlineNumericField, text: string) => {
+        const config = INLINE_NUMERIC_CONFIG[field];
+        const cleaned = sanitizeNumericInput(text, config.allowDecimal);
 
-    const getDriveEta = (type: DriveType) => {
-        switch (type) {
-            case "Đai":
-                return efficiencyData.etaBelt;
-            case "Bánh răng côn":
-                return efficiencyData.etaBevelGear;
-            case "Bánh răng trụ":
-                return efficiencyData.etaStraightGear;
-            case "Trục vít tự hãm":
-                return efficiencyData.etaWormSelfLocking;
-            case "Trục vít không tự hãm":
-                return efficiencyData.etaWormNonSelfLocking;
-            case "Xích":
-                return efficiencyData.etaChain;
-            case "Bánh ma sát":
-                return efficiencyData.etaFriction;
+        switch (field) {
+            case 'power':
+            case 'speed':
+            case 'serviceLife':
+                setOperatingField(field, cleaned);
+                break;
+            case 'workShifts':
+            case 'workingDaysPerYear':
+            case 'hoursPerShift':
+                setLoadField(field, cleaned);
+                break;
             default:
-                return "";
+                break;
+        }
+
+        setInlineError(field, validateInlineNumeric(field, cleaned));
+    };
+
+    const getInlineValue = (field: InlineNumericField) => {
+        switch (field) {
+            case 'power':
+            case 'speed':
+            case 'serviceLife':
+                return operatingData[field];
+            case 'workShifts':
+            case 'workingDaysPerYear':
+            case 'hoursPerShift':
+                return loadData[field];
+            default:
+                return '';
         }
     };
 
-    const getBearingEta = (type: BearingType) => {
-        switch (type) {
-            case "Ổ lăn":
-                return efficiencyData.etaBearing;
-            case "Ổ trượt":
-                return efficiencyData.etaSlidingBearing;
-            default:
-                return "";
+    const validateInlineBeforeSubmit = () => {
+        const nextErrors: Partial<Record<InlineErrorKey, string>> = {};
+
+        (Object.keys(INLINE_NUMERIC_CONFIG) as InlineNumericField[]).forEach(
+            (field) => {
+                const message = validateInlineNumeric(field, getInlineValue(field));
+                if (message) {
+                    nextErrors[field] = message;
+                }
+            },
+        );
+
+        if (!loadData.loadType) {
+            nextErrors.loadType = 'Vui lòng chọn đặc tính tải.';
         }
+
+        if (!loadData.rotationDirection) {
+            nextErrors.rotationDirection = 'Vui lòng chọn chiều quay.';
+        }
+
+        setInlineErrors(nextErrors);
+        return Object.keys(nextErrors).length === 0;
     };
 
     const validateAndCalculate = () => {
-        if (!operatingData.power || !operatingData.speed || !operatingData.serviceLife) {
-            setErrorType("empty");
-            setErrorMessage("Thiếu dữ liệu bắt buộc");
-            setErrorSuggestion("Vui lòng nhập đầy đủ Công suất (P), Vòng quay (n) và Thời gian phục vụ (L)");
+        if (!validateInlineBeforeSubmit()) {
+            return;
+        }
+
+        const physicalResult = validatePhysicalConstraints({
+            operatingData,
+            loadData,
+            driveItems,
+            bearingItems,
+            efficiencyData,
+        });
+
+        if (!physicalResult.isValid) {
+            setErrorType(physicalResult.errorType ?? 'threshold');
+            setErrorMessage(physicalResult.message ?? 'Dữ liệu chưa hợp lệ');
+            setErrorSuggestion(
+                physicalResult.suggestion ??
+                    'Vui lòng kiểm tra lại dữ liệu trước khi tính toán.',
+            );
             setShowErrorModal(true);
             return;
         }
 
-        if (!loadType || !workShifts) {
-            setErrorType("empty");
-            setErrorMessage("Thiếu dữ liệu bắt buộc");
-            setErrorSuggestion("Vui lòng chọn đặc tính tải và số ca làm việc");
-            setShowErrorModal(true);
-            return;
-        }
-
-        const power = parseFloat(operatingData.power);
-        const speed = parseFloat(operatingData.speed);
-        const serviceLife = parseFloat(operatingData.serviceLife);
-
-        if (isNaN(power) || isNaN(speed) || isNaN(serviceLife)) {
-            setErrorType("format");
-            setErrorMessage("Sai kiểu dữ liệu");
-            setErrorSuggestion("Công suất, Vòng quay và Thời gian phục vụ phải là số hợp lệ");
-            setShowErrorModal(true);
-            return;
-        }
-
-        if (power <= 0 || power > 500) {
-            setErrorType("threshold");
-            setErrorMessage("Dữ liệu phi thực tế");
-            setErrorSuggestion("Công suất phải nằm trong khoảng 0.1 - 500 kW. Đối với hệ thống công nghiệp nhỏ, công suất thường từ 0.5 - 50 kW.");
-            setShowErrorModal(true);
-            return;
-        }
-
-        if (speed <= 0 || speed > 10000) {
-            setErrorType("threshold");
-            setErrorMessage("Dữ liệu phi thực tế");
-            setErrorSuggestion("Vòng quay phải nằm trong khoảng 10 - 10000 rpm. Động cơ điện thường có vòng quay 750, 1000, 1500, hoặc 3000 rpm.");
-            setShowErrorModal(true);
-            return;
-        }
-
-        if (serviceLife <= 0 || serviceLife > 50) {
-            setErrorType("threshold");
-            setErrorMessage("Dữ liệu phi thực tế");
-            setErrorSuggestion("Thời gian phục vụ thường từ 1 - 25 năm cho máy công nghiệp thông thường.");
-            setShowErrorModal(true);
-            return;
-        }
-
-        if (driveItems.length === 0) {
-            setErrorType("empty");
-            setErrorMessage("Thiếu dữ liệu bộ truyền động");
-            setErrorSuggestion("Vui lòng thêm ít nhất 1 bộ truyền động bằng nút +.");
-            setShowErrorModal(true);
-            return;
-        }
-
-        if (bearingItems.length === 0) {
-            setErrorType("empty");
-            setErrorMessage("Thiếu dữ liệu ổ truyền động");
-            setErrorSuggestion("Vui lòng thêm ít nhất 1 ổ truyền động bằng nút +.");
-            setShowErrorModal(true);
-            return;
-        }
-
-        const invalidDriveQty = driveItems.find(item => !item.quantity || isNaN(Number(item.quantity)) || Number(item.quantity) <= 0);
-        if (invalidDriveQty) {
-            setErrorType("format");
-            setErrorMessage("Số lượng bộ truyền động không hợp lệ");
-            setErrorSuggestion("Số lượng của mỗi bộ truyền động phải là số dương.");
-            setShowErrorModal(true);
-            return;
-        }
-
-        const invalidDriveRatio = driveItems.find(item => !item.transmissionRatio || isNaN(Number(item.transmissionRatio)) || Number(item.transmissionRatio) <= 0);
-        if (invalidDriveRatio) {
-            setErrorType("format");
-            setErrorMessage("Tỉ số truyền không hợp lệ");
-            setErrorSuggestion("Vui lòng nhập tỉ số truyền là số dương cho mỗi bộ truyền động.");
-            setShowErrorModal(true);
-            return;
-        }
-
-        const invalidBearingQty = bearingItems.find(item => !item.quantity || isNaN(Number(item.quantity)) || Number(item.quantity) <= 0);
-        if (invalidBearingQty) {
-            setErrorType("format");
-            setErrorMessage("Số lượng ổ truyền động không hợp lệ");
-            setErrorSuggestion("Số lượng của mỗi ổ truyền động phải là số dương.");
-            setShowErrorModal(true);
-            return;
-        }
-
-        const missingZ = driveItems.find(item => item.type === "Trục vít không tự hãm" && !item.z);
-        if (missingZ) {
-            setErrorType("empty");
-            setErrorMessage("Thiếu thông số z");
-            setErrorSuggestion("Với Trục vít không tự hãm, vui lòng chọn z = 1, 2 hoặc 4.");
-            setShowErrorModal(true);
-            return;
-        }
-
-        const driveItemsWithEfficiency = driveItems.map(item => ({
+        const driveItemsWithEfficiency = driveItems.map((item) => ({
             ...item,
-            eta: getDriveEta(item.type),
-            efficiencyTransmissionRatio: getDriveEta(item.type),
+            eta: getDriveEta(item.type, efficiencyData),
         }));
 
-        const bearingItemsWithEfficiency = bearingItems.map(item => ({
+        const bearingItemsWithEfficiency = bearingItems.map((item) => ({
             ...item,
-            eta: getBearingEta(item.type),
-            efficiencyTransmissionRatio: getBearingEta(item.type),
+            eta: getBearingEta(item.type, efficiencyData),
         }));
 
         const normalizedItems = {
@@ -211,13 +332,13 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
 
         const { Pct, n_sb, motors, ratios } = runMotorSuggestion({
             operatingData,
-            loadData: { loadType, workShifts },
+            loadData,
             efficiencyData,
             driveItems: driveItemsWithEfficiency,
             bearingItems: bearingItemsWithEfficiency,
         });
 
-        navigation.navigate("MotorSelection", {
+        navigation.navigate('MotorSelection', {
             inputData: {
                 name: calculateSession.trim(),
                 operatingData: {
@@ -226,8 +347,12 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
                     serviceLife: operatingData.serviceLife,
                 },
                 loadData: {
-                    loadType,
-                    workShifts,
+                    loadType: loadData.loadType,
+                    workShifts: loadData.workShifts,
+                    rotationDirection: loadData.rotationDirection,
+                    workingDaysPerYear: loadData.workingDaysPerYear,
+                    hoursPerShift: loadData.hoursPerShift,
+                    bearingBrand: loadData.bearingBrand,
                 },
                 item: normalizedItems,
                 Item: normalizedItems,
@@ -244,48 +369,193 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
         });
     };
 
-    const renderInput = (label: string, value: string, setValue: (val: string) => void, placeholder: string, helperText?: string) => (
+    const renderInput = (
+        label: string,
+        value: string,
+        setValue: (val: string) => void,
+        placeholder: string,
+        options?: {
+            error?: string;
+            onBlur?: () => void;
+        },
+    ) => (
         <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>{label}</Text>
             <TextInput
-                style={[styles.textInput, isReadOnly && styles.textInputDisabled]}
+                style={[
+                    styles.textInput,
+                    isReadOnly && styles.textInputDisabled,
+                    options?.error ? styles.inputError : undefined,
+                ]}
                 keyboardType="numeric"
                 value={value}
                 onChangeText={setValue}
+                onBlur={options?.onBlur}
                 placeholder={placeholder}
                 placeholderTextColor="#9ca3af"
                 editable={!isReadOnly}
             />
-            {helperText ? <Text style={styles.inputHelperText}>{helperText}</Text> : null}
+            {options?.error ? (
+                <Text style={styles.inlineErrorText}>{options.error}</Text>
+            ) : null}
         </View>
     );
 
-    const renderSmallInput = (label: string, value: string, setValue: (val: string) => void, key?: string) => (
-        <View key={key} style={styles.smallInputWrapper}>
+    const renderSmallInput = (
+        label: string,
+        value: string,
+        setValue: (val: string) => void,
+        options?: {
+            error?: string;
+            placeholder?: string;
+            onBlur?: () => void;
+            fullWidth?: boolean;
+        },
+    ) => (
+        <View
+            style={[
+                styles.smallInputWrapper,
+                options?.fullWidth ? styles.smallInputWrapperFull : undefined,
+            ]}
+        >
             <Text style={styles.smallInputLabel}>{label}</Text>
             <TextInput
-                style={[styles.smallTextInput, isReadOnly && styles.textInputDisabled]}
+                style={[
+                    styles.smallTextInput,
+                    isReadOnly && styles.textInputDisabled,
+                    options?.error ? styles.inputError : undefined,
+                ]}
                 keyboardType="numeric"
                 value={value}
                 onChangeText={setValue}
+                onBlur={options?.onBlur}
+                placeholder={options?.placeholder}
+                placeholderTextColor="#9ca3af"
                 editable={!isReadOnly}
             />
+            {options?.error ? (
+                <Text style={styles.inlineErrorText}>{options.error}</Text>
+            ) : null}
         </View>
     );
 
-    const selectedDriveTypes = new Set(driveItems.map(item => item.type));
-    const selectedBearingTypes = new Set(bearingItems.map(item => item.type));
+    const renderDropdownInput = (
+        label: string,
+        value: string,
+        placeholder: string,
+        options: Array<{ label: string; value: string }>,
+        dropdownKey: string,
+        onSelect: (selectedValue: string) => void,
+        config?: {
+            error?: string;
+            disabled?: boolean;
+        },
+    ) => {
+        const isDropdownDisabled = isReadOnly || config?.disabled;
 
-    const etaConfigs: Array<{ label: string; key: keyof typeof efficiencyData }> = [
-        ...(selectedDriveTypes.has("Đai") ? [{ label: "η Đai", key: "etaBelt" as const }] : []),
-        ...(selectedDriveTypes.has("Bánh răng côn") ? [{ label: "η BR Côn", key: "etaBevelGear" as const }] : []),
-        ...(selectedDriveTypes.has("Bánh răng trụ") ? [{ label: "η BR Trụ", key: "etaStraightGear" as const }] : []),
-        ...(selectedDriveTypes.has("Trục vít tự hãm") ? [{ label: "η TV tự hãm", key: "etaWormSelfLocking" as const }] : []),
-        ...(selectedDriveTypes.has("Trục vít không tự hãm") ? [{ label: "η TV không tự hãm", key: "etaWormNonSelfLocking" as const }] : []),
-        ...(selectedDriveTypes.has("Xích") ? [{ label: "η Xích", key: "etaChain" as const }] : []),
-        ...(selectedDriveTypes.has("Bánh ma sát") ? [{ label: "η Bánh ma sát", key: "etaFriction" as const }] : []),
-        ...(selectedBearingTypes.has("Ổ lăn") ? [{ label: "η Ổ lăn", key: "etaBearing" as const }] : []),
-        ...(selectedBearingTypes.has("Ổ trượt") ? [{ label: "η Ổ trượt", key: "etaSlidingBearing" as const }] : []),
+        return (
+            <View style={styles.inputWrapper}>
+                <Text style={styles.inputLabel}>{label}</Text>
+                <TouchableOpacity
+                    style={[
+                        styles.textInput,
+                        styles.dropdownTrigger,
+                        isDropdownDisabled && styles.textInputDisabled,
+                        config?.error ? styles.inputError : undefined,
+                    ]}
+                    onPress={() => {
+                        if (!isDropdownDisabled) {
+                            setActiveDropdown(dropdownKey);
+                        }
+                    }}
+                    disabled={isDropdownDisabled}
+                >
+                    <Text
+                        style={
+                            value
+                                ? styles.dropdownValueText
+                                : styles.dropdownPlaceholderText
+                        }
+                    >
+                        {value || placeholder}
+                    </Text>
+                    <Text style={styles.dropdownChevron}>▼</Text>
+                </TouchableOpacity>
+                {config?.error ? (
+                    <Text style={styles.inlineErrorText}>{config.error}</Text>
+                ) : null}
+
+                <Modal
+                    transparent
+                    animationType="fade"
+                    visible={activeDropdown === dropdownKey}
+                    onRequestClose={() => setActiveDropdown(null)}
+                >
+                    <TouchableOpacity
+                        style={styles.dropdownModalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setActiveDropdown(null)}
+                    >
+                        <TouchableWithoutFeedback>
+                            <View style={styles.dropdownModalContent}>
+                                {options.map((option, index) => (
+                                    <TouchableOpacity
+                                        key={`${dropdownKey}-${option.value}`}
+                                        style={[
+                                            styles.dropdownOption,
+                                            index < options.length - 1
+                                                ? styles.dropdownOptionBorder
+                                                : undefined,
+                                        ]}
+                                        onPress={() => {
+                                            onSelect(option.value);
+                                            setActiveDropdown(null);
+                                        }}
+                                    >
+                                        <Text style={styles.dropdownOptionText}>
+                                            {option.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </TouchableOpacity>
+                </Modal>
+            </View>
+        );
+    };
+
+    const selectedDriveTypes = new Set(driveItems.map((item) => item.type));
+    const selectedBearingTypes = new Set(bearingItems.map((item) => item.type));
+
+    const etaConfigs: Array<{ label: string; key: keyof EfficiencyData }> = [
+        ...(selectedDriveTypes.has('Đai')
+            ? [{ label: 'η Đai', key: 'etaBelt' as const }]
+            : []),
+        ...(selectedDriveTypes.has('Bánh răng côn')
+            ? [{ label: 'η BR Côn', key: 'etaBevelGear' as const }]
+            : []),
+        ...(selectedDriveTypes.has('Bánh răng trụ')
+            ? [{ label: 'η BR Trụ', key: 'etaStraightGear' as const }]
+            : []),
+        ...(selectedDriveTypes.has('Trục vít tự hãm')
+            ? [{ label: 'η TV tự hãm', key: 'etaWormSelfLocking' as const }]
+            : []),
+        ...(selectedDriveTypes.has('Trục vít không tự hãm')
+            ? [{ label: 'η TV không tự hãm', key: 'etaWormNonSelfLocking' as const }]
+            : []),
+        ...(selectedDriveTypes.has('Xích')
+            ? [{ label: 'η Xích', key: 'etaChain' as const }]
+            : []),
+        ...(selectedDriveTypes.has('Bánh ma sát')
+            ? [{ label: 'η Bánh ma sát', key: 'etaFriction' as const }]
+            : []),
+        ...(selectedBearingTypes.has('Ổ lăn')
+            ? [{ label: 'η Ổ lăn', key: 'etaBearing' as const }]
+            : []),
+        ...(selectedBearingTypes.has('Ổ trượt')
+            ? [{ label: 'η Ổ trượt', key: 'etaSlidingBearing' as const }]
+            : []),
     ];
 
     return (
@@ -330,31 +600,161 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
 
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Thông số gốc</Text>
-                        {renderInput("Công suất (P) - kW", operatingData.power, (val) => setOperatingField("power", val), "Nhập công suất", "Giới hạn: 0.1 - 500 kW")}
-                        {renderInput("Vòng quay (n) - v/ph", operatingData.speed, (val) => setOperatingField("speed", val), "Nhập vòng quay", "Giới hạn: 10 - 10000 rpm")}
-                        {renderInput("Thời gian phục vụ (L) - năm", operatingData.serviceLife, (val) => setOperatingField("serviceLife", val), "Nhập thời gian", "Giới hạn: 1 - 50 năm")}
+                        {renderInput(
+                            'Công suất (P) - kW',
+                            operatingData.power,
+                            (val) => updateNumericField('power', val),
+                            'Nhập công suất',
+                            {
+                                error: inlineErrors.power,
+                                onBlur: () =>
+                                    setInlineError(
+                                        'power',
+                                        validateInlineNumeric('power', operatingData.power),
+                                    ),
+                            },
+                        )}
+                        {renderInput(
+                            'Vòng quay (n) - v/ph',
+                            operatingData.speed,
+                            (val) => updateNumericField('speed', val),
+                            'Nhập vòng quay',
+                            {
+                                error: inlineErrors.speed,
+                                onBlur: () =>
+                                    setInlineError(
+                                        'speed',
+                                        validateInlineNumeric('speed', operatingData.speed),
+                                    ),
+                            },
+                        )}
+                        {renderInput(
+                            'Thời gian phục vụ (L) - năm',
+                            operatingData.serviceLife,
+                            (val) => updateNumericField('serviceLife', val),
+                            'Nhập thời gian',
+                            {
+                                error: inlineErrors.serviceLife,
+                                onBlur: () =>
+                                    setInlineError(
+                                        'serviceLife',
+                                        validateInlineNumeric(
+                                            'serviceLife',
+                                            operatingData.serviceLife,
+                                        ),
+                                    ),
+                            },
+                        )}
                     </View>
 
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Điều kiện tải</Text>
+                        {renderDropdownInput(
+                            'Đặc tính tải',
+                            loadData.loadType,
+                            'Chọn đặc tính tải',
+                            loadTypeOptions.map((option) => ({
+                                label: option,
+                                value: option,
+                            })),
+                            'loadType',
+                            (selectedValue) => {
+                                setLoadField('loadType', selectedValue);
+                                setInlineError('loadType', '');
+                            },
+                            { error: inlineErrors.loadType },
+                        )}
 
-                        <Text style={styles.inputLabel}>Đặc tính tải</Text>
-                        <View style={styles.pillsContainer}>
-                            {loadTypeOptions.map(option => (
-                                <TouchableOpacity key={option} style={[styles.pill, loadType === option && styles.pillActive]} onPress={() => setLoadField("loadType", option)} disabled={isReadOnly}>
-                                    <Text style={[styles.pillText, loadType === option && styles.pillTextActive]}>{option}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                        {renderDropdownInput(
+                            'Chiều quay',
+                            loadData.rotationDirection,
+                            'Chọn chiều quay',
+                            rotationDirectionOptions.map((option) => ({
+                                label: option,
+                                value: option,
+                            })),
+                            'rotationDirection',
+                            (selectedValue) => {
+                                setLoadField('rotationDirection', selectedValue);
+                                setInlineError('rotationDirection', '');
+                            },
+                            { error: inlineErrors.rotationDirection },
+                        )}
+                    </View>
 
-                        <Text style={[styles.inputLabel, { marginTop: 16 }]}>Số ca làm việc</Text>
-                        <View style={styles.pillsContainer}>
-                            {workShiftOptions.map(option => (
-                                <TouchableOpacity key={option} style={[styles.pill, workShifts === option && styles.pillActive]} onPress={() => setLoadField("workShifts", option)} disabled={isReadOnly}>
-                                    <Text style={[styles.pillText, workShifts === option && styles.pillTextActive]}>{option}</Text>
-                                </TouchableOpacity>
-                            ))}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Chế độ làm việc</Text>
+                        <View style={styles.gridContainer}>
+                            {renderSmallInput(
+                                'Ngày làm việc / năm',
+                                loadData.workingDaysPerYear,
+                                (val) => updateNumericField('workingDaysPerYear', val),
+                                {
+                                    placeholder: 'Nhập số ngày',
+                                    error: inlineErrors.workingDaysPerYear,
+                                    onBlur: () =>
+                                        setInlineError(
+                                            'workingDaysPerYear',
+                                            validateInlineNumeric(
+                                                'workingDaysPerYear',
+                                                loadData.workingDaysPerYear,
+                                            ),
+                                        ),
+                                },
+                            )}
+                            {renderSmallInput(
+                                'Số ca làm việc / ngày',
+                                loadData.workShifts,
+                                (val) => updateNumericField('workShifts', val),
+                                {
+                                    placeholder: 'Nhập số ca',
+                                    error: inlineErrors.workShifts,
+                                    onBlur: () =>
+                                        setInlineError(
+                                            'workShifts',
+                                            validateInlineNumeric(
+                                                'workShifts',
+                                                loadData.workShifts,
+                                            ),
+                                        ),
+                                },
+                            )}
                         </View>
+                        <View style={{ marginTop: 8 }}>
+                            {renderSmallInput(
+                                'Số giờ làm việc / ca',
+                                loadData.hoursPerShift,
+                                (val) => updateNumericField('hoursPerShift', val),
+                                {
+                                    placeholder: 'Nhập số giờ',
+                                    error: inlineErrors.hoursPerShift,
+                                    fullWidth: true,
+                                    onBlur: () =>
+                                        setInlineError(
+                                            'hoursPerShift',
+                                            validateInlineNumeric(
+                                                'hoursPerShift',
+                                                loadData.hoursPerShift,
+                                            ),
+                                        ),
+                                },
+                            )}
+                        </View>
+                    </View>
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Ràng buộc thiết kế</Text>
+                        {renderDropdownInput(
+                            'Hãng ổ lăn (tùy chọn)',
+                            loadData.bearingBrand,
+                            'Chọn hãng ổ lăn',
+                            bearingBrandOptions.map((option) => ({
+                                label: option,
+                                value: option,
+                            })),
+                            'bearingBrand',
+                            (selectedValue) => setLoadField('bearingBrand', selectedValue),
+                        )}
                     </View>
 
                     <View style={styles.section}>
@@ -371,6 +771,12 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
 
                         {driveItems.map((item, idx) => {
                             const forceOpen = isDriveForcedOpen(item.type);
+                            const statusOptions = forceOpen
+                                ? [{ label: 'Hở (true)', value: 'true' }]
+                                : [
+                                      { label: 'Hở (true)', value: 'true' },
+                                      { label: 'Không hở (false)', value: 'false' },
+                                  ];
                             return (
                                 <View key={item.id} style={styles.dynamicItemCard}>
                                     <View style={styles.dynamicItemHeader}>
@@ -382,65 +788,62 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
                                         )}
                                     </View>
 
-                                    <Text style={styles.inputLabel}>Loại bộ truyền động</Text>
-                                    <View style={styles.pillsContainer}>
-                                        {driveTypeOptions.map(option => (
-                                            <TouchableOpacity
-                                                key={`${item.id}-${option}`}
-                                                style={[styles.pill, item.type === option && styles.pillActive]}
-                                                onPress={() => updateDriveItem(item.id, { type: option })}
-                                                disabled={isReadOnly}
-                                            >
-                                                <Text style={[styles.pillText, item.type === option && styles.pillTextActive]}>{option}</Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
+                                    {renderDropdownInput(
+                                        'Loại bộ truyền động',
+                                        item.type,
+                                        'Chọn loại bộ truyền động',
+                                        driveTypeOptions.map((option) => ({
+                                            label: option,
+                                            value: option,
+                                        })),
+                                        `drive-type-${item.id}`,
+                                        (selectedValue) =>
+                                            updateDriveItem(item.id, {
+                                                type: selectedValue as DriveType,
+                                            }),
+                                    )}
 
                                     <View style={[styles.gridContainer, { marginTop: 12 }]}>
-                                        {renderSmallInput("Số lượng", item.quantity, val => updateDriveItem(item.id, { quantity: val }))}
-                                        {renderSmallInput("Tỉ số truyền", item.transmissionRatio, val => updateDriveItem(item.id, { transmissionRatio: val }))}
+                                        {renderSmallInput('Số lượng', item.quantity, (val) =>
+                                            updateDriveItem(item.id, {
+                                                quantity: sanitizeNumericInput(val, false),
+                                            }),
+                                        )}
+                                        {renderSmallInput('Tỉ số truyền', item.transmissionRatio, (val) =>
+                                            updateDriveItem(item.id, {
+                                                transmissionRatio: sanitizeNumericInput(val, true),
+                                            }),
+                                        )}
                                     </View>
 
-                                    <Text style={[styles.inputLabel, { marginTop: 12 }]}>Trạng thái</Text>
-                                    <View style={styles.booleanRow}>
-                                        <TouchableOpacity
-                                            style={[styles.booleanBtn, item.isOpen && styles.booleanBtnActive, forceOpen && styles.booleanBtnDisabled]}
-                                            onPress={() => updateDriveItem(item.id, { isOpen: true })}
-                                            disabled={isReadOnly || forceOpen}
-                                        >
-                                            <Text style={[styles.booleanBtnText, item.isOpen && styles.booleanBtnTextActive]}>Hở (true)</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.booleanBtn,
-                                                !item.isOpen && styles.booleanBtnActive,
-                                                forceOpen && styles.booleanBtnDisabled,
-                                            ]}
-                                            onPress={() => !forceOpen && updateDriveItem(item.id, { isOpen: false })}
-                                            disabled={isReadOnly || forceOpen}
-                                        >
-                                            <Text style={[styles.booleanBtnText, !item.isOpen && styles.booleanBtnTextActive]}>Không hở (false)</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                    {forceOpen ? <Text style={styles.helperText}>Loại này bắt buộc là "Hở".</Text> : null}
-
-                                    {item.type === "Trục vít không tự hãm" ? (
-                                        <>
-                                            <Text style={[styles.inputLabel, { marginTop: 12 }]}>Chọn z</Text>
-                                            <View style={styles.pillsContainer}>
-                                                {zOptions.map(z => (
-                                                    <TouchableOpacity
-                                                        key={`${item.id}-z-${z}`}
-                                                        style={[styles.pill, item.z === z && styles.pillActive]}
-                                                        onPress={() => updateDriveItem(item.id, { z })}
-                                                        disabled={isReadOnly}
-                                                    >
-                                                        <Text style={[styles.pillText, item.z === z && styles.pillTextActive]}>{z}</Text>
-                                                    </TouchableOpacity>
-                                                ))}
-                                            </View>
-                                        </>
+                                    {renderDropdownInput(
+                                        'Trạng thái',
+                                        item.isOpen ? 'Hở (true)' : 'Không hở (false)',
+                                        'Chọn trạng thái',
+                                        statusOptions,
+                                        `drive-state-${item.id}`,
+                                        (selectedValue) =>
+                                            updateDriveItem(item.id, {
+                                                isOpen: selectedValue === 'true',
+                                            }),
+                                    )}
+                                    {forceOpen ? (
+                                        <Text style={styles.helperText}>Loại này bắt buộc là "Hở".</Text>
                                     ) : null}
+
+                                    {item.type === 'Trục vít không tự hãm'
+                                        ? renderDropdownInput(
+                                              'Chọn z',
+                                              item.z ?? '',
+                                              'Chọn z',
+                                              zOptions.map((z) => ({ label: z, value: z })),
+                                              `drive-z-${item.id}`,
+                                              (selectedValue) =>
+                                                  updateDriveItem(item.id, {
+                                                      z: selectedValue as '1' | '2' | '4',
+                                                  }),
+                                          )
+                                        : null}
                                 </View>
                             );
                         })}
@@ -469,22 +872,27 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
                                     )}
                                 </View>
 
-                                <Text style={styles.inputLabel}>Loại ổ</Text>
-                                <View style={styles.pillsContainer}>
-                                    {bearingTypeOptions.map(option => (
-                                        <TouchableOpacity
-                                            key={`${item.id}-${option}`}
-                                            style={[styles.pill, item.type === option && styles.pillActive]}
-                                            onPress={() => updateBearingItem(item.id, { type: option })}
-                                            disabled={isReadOnly}
-                                        >
-                                            <Text style={[styles.pillText, item.type === option && styles.pillTextActive]}>{option}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
+                                {renderDropdownInput(
+                                    'Loại ổ',
+                                    item.type,
+                                    'Chọn loại ổ',
+                                    bearingTypeOptions.map((option) => ({
+                                        label: option,
+                                        value: option,
+                                    })),
+                                    `bearing-type-${item.id}`,
+                                    (selectedValue) =>
+                                        updateBearingItem(item.id, {
+                                            type: selectedValue as BearingType,
+                                        }),
+                                )}
 
                                 <View style={{ marginTop: 12 }}>
-                                    {renderSmallInput("Số lượng", item.quantity, val => updateBearingItem(item.id, { quantity: val }))}
+                                    {renderSmallInput('Số lượng', item.quantity, (val) =>
+                                        updateBearingItem(item.id, {
+                                            quantity: sanitizeNumericInput(val, false),
+                                        }),
+                                    )}
                                 </View>
 
                                 <Text style={[styles.helperText, { marginTop: 6 }]}>Mặc định: Hở (true)</Text>
@@ -495,13 +903,28 @@ export default function InputScreen({ route, navigation }: InputScreenProps) {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Cấu hình Sơ đồ động</Text>
                         <View style={styles.gridContainer}>
-                            {etaConfigs.map(config =>
-                                renderSmallInput(config.label, efficiencyData[config.key], val => setEfficiencyField(config.key, val), config.key)
+                            {etaConfigs.map((config) =>
+                                renderSmallInput(
+                                    config.label,
+                                    efficiencyData[config.key],
+                                    (val) =>
+                                        setEfficiencyField(
+                                            config.key,
+                                            sanitizeNumericInput(val, true),
+                                        ),
+                                ),
                             )}
                         </View>
                         <View style={[styles.gridContainer, { marginTop: 16 }]}>
-                            {renderSmallInput("u Đai", efficiencyData.uBelt, val => setEfficiencyField("uBelt", val))}
-                            {renderSmallInput("u HGT", efficiencyData.uGearbox, val => setEfficiencyField("uGearbox", val))}
+                            {renderSmallInput('u Đai', efficiencyData.uBelt, (val) =>
+                                setEfficiencyField('uBelt', sanitizeNumericInput(val, true)),
+                            )}
+                            {renderSmallInput('u HGT', efficiencyData.uGearbox, (val) =>
+                                setEfficiencyField(
+                                    'uGearbox',
+                                    sanitizeNumericInput(val, true),
+                                ),
+                            )}
                         </View>
                     </View>
                 </ScrollView>
@@ -561,22 +984,22 @@ const styles = StyleSheet.create({
     inputWrapper: { marginBottom: 16 },
     inputLabel: { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 8 },
     textInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 14, fontSize: 16, color: '#111827' },
-    inputHelperText: { fontSize: 12, color: '#6b7280', marginTop: 6 },
     smallInputWrapper: { width: '48%', marginBottom: 12 },
+    smallInputWrapperFull: { width: '100%' },
     smallInputLabel: { fontSize: 12, fontWeight: '500', color: '#6b7280', marginBottom: 6 },
     smallTextInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 10, fontSize: 14, color: '#111827' },
+    inputError: { borderColor: '#dc2626' },
+    inlineErrorText: { marginTop: 6, fontSize: 12, color: '#dc2626', lineHeight: 16 },
     gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    pillsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    pill: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: '#d1d5db', backgroundColor: '#fff' },
-    pillActive: { backgroundColor: '#EFF6FF', borderColor: '#3b82f6' },
-    pillText: { fontSize: 14, color: '#6b7280', fontWeight: '500' },
-    pillTextActive: { color: '#1d4ed8', fontWeight: '600' },
-    booleanRow: { flexDirection: 'row', gap: 8 },
-    booleanBtn: { flex: 1, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, paddingVertical: 10, alignItems: 'center', backgroundColor: '#fff' },
-    booleanBtnActive: { backgroundColor: '#eff6ff', borderColor: '#3b82f6' },
-    booleanBtnDisabled: { opacity: 0.75 },
-    booleanBtnText: { color: '#4b5563', fontWeight: '500', fontSize: 12 },
-    booleanBtnTextActive: { color: '#1d4ed8', fontWeight: '700' },
+    dropdownTrigger: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff' },
+    dropdownValueText: { fontSize: 16, color: '#111827', flexShrink: 1 },
+    dropdownPlaceholderText: { fontSize: 16, color: '#9ca3af', flexShrink: 1 },
+    dropdownChevron: { fontSize: 12, color: '#6b7280', marginLeft: 12 },
+    dropdownModalOverlay: { flex: 1, backgroundColor: 'rgba(17, 24, 39, 0.45)', justifyContent: 'center', padding: 24 },
+    dropdownModalContent: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', overflow: 'hidden' },
+    dropdownOption: { paddingVertical: 14, paddingHorizontal: 16 },
+    dropdownOptionBorder: { borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+    dropdownOptionText: { fontSize: 15, color: '#111827' },
     footer: { padding: 20, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e5e7eb' },
     submitButton: { backgroundColor: '#2563eb', padding: 16, borderRadius: 12, alignItems: 'center' },
     submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
