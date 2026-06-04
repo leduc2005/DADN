@@ -1,0 +1,878 @@
+{
+    "table_metadata": {
+        "table_id": "2.1",
+        "title": "Bảng đặc trưng cơ – điện của động cơ",
+        "description": "Thông số kỹ thuật chi tiết của động cơ điện xoay chiều"
+    },
+    "data": [
+        {
+            "motor_model": "4A112M2Y3",
+            "power_kw": 7.5,
+            "rotational_speed_rpm": 2922,
+            "power_factor_cos_phi": 0.88,
+            "efficiency_percentage": 87.5,
+            "overload_capacity_ratio_tmax_tn": 2.2,
+            "starting_torque_ratio_tk_tn": 2.0
+        }
+    ],
+    "definitions": {
+        "power_kw": "Công suất định mức (kilowatt)",
+        "rotational_speed_rpm": "Vận tốc quay (vòng/phút)",
+        "power_factor_cos_phi": "Hệ số công suất cos phi",
+        "efficiency_percentage": "Hiệu suất định mức tính theo phần trăm",
+        "overload_capacity_ratio_tmax_tn": "Tỷ số momen cực đại trên momen định mức (Tmax/Tđ)",
+        "starting_torque_ratio_tk_tn": "Tỷ số momen khởi động trên momen định mức (Tk/Tđ)"
+    }
+}
+
+{
+    "document_info": {
+        "table_id": "2.2",
+        "title": "Bảng số liệu động học và động lực học trên các trục của hệ thống dẫn động"
+    },
+    "system_parameters": {
+        "transmission_ratios": {
+            "u_motor_to_I": 2.5,
+            "u_I_to_II": 4.5,
+            "u_II_to_III": 3.7104
+        }
+    },
+    "shaft_data": [
+        {
+            "shaft_id": "Động cơ",
+            "power_P_kW": 6.084,
+            "speed_n_rpm": 2922,
+            "torque_T_Nmm": 19885.405
+        },
+        {
+            "shaft_id": "Trục I",
+            "power_P_kW": 5.872,
+            "speed_n_rpm": 1168.8,
+            "torque_T_Nmm": 47980.997
+        },
+        {
+            "shaft_id": "Trục II",
+            "power_P_kW": 5.726,
+            "speed_n_rpm": 259.7,
+            "torque_T_Nmm": 210538.217
+        },
+        {
+            "shaft_id": "Trục III",
+            "power_P_kW": 5.583,
+            "speed_n_rpm": 69.9,
+            "torque_T_Nmm": 761745.234
+        }
+    ],
+    "unit_definitions": {
+        "P": "Công suất (kW)",
+        "u": "Tỉ số truyền (không đơn vị)",
+        "n": "Số vòng quay (vòng/phút)",
+        "T": "Moment xoắn (N.mm)"
+    }
+}
+
+{
+    "document_context": {
+        "title": "Bảng 3.1: Bảng thông số của bộ truyền đai thang",
+        "belt_drive_parameters": [
+            {
+                "parameter_name": "Đường kính đai nhỏ d1",
+                "symbol": "d1",
+                "value": 140,
+                "unit": "mm"
+            },
+            {
+                "parameter_name": "Đường kính đai lớn d2",
+                "symbol": "d2",
+                "value": 357.143,
+                "unit": "mm"
+            },
+            {
+                "parameter_name": "Khoảng cách trục",
+                "symbol": "a",
+                "value": 867.886,
+                "unit": "mm"
+            },
+            {
+                "parameter_name": "Chiều dài dây đai",
+                "symbol": "L",
+                "value": 2500,
+                "unit": "mm"
+            },
+            {
+                "parameter_name": "Góc ôm đai",
+                "symbol": "alpha",
+                "value": 165.739,
+                "unit": "degree"
+            },
+            {
+                "parameter_name": "Số đai",
+                "symbol": "Z",
+                "value": 2,
+                "unit": "đai"
+            },
+            {
+                "parameter_name": "Chiều dài đai B (Khổ rộng)",
+                "symbol": "B",
+                "value": 44,
+                "unit": "mm"
+            },
+            {
+                "parameter_name": "Lực căng ban đầu",
+                "symbol": "F0",
+                "value": 214.157,
+                "unit": "N"
+            },
+            {
+                "parameter_name": "Lực tác dụng lên trục",
+                "symbol": "Fr",
+                "value": 797.544,
+                "unit": "N"
+            }
+        ],
+        "metadata": {
+            "page_number": 23,
+            "category": "Mechanical Engineering - Belt Drive Design"
+        }
+    }
+
+{
+        "mechanical_component": "Nối trục vòng đàn hồi",
+        "tables": [
+            {
+                "table_id": "3.2",
+                "table_name": "Bảng kích thước nối trục vòng đàn hồi",
+                "data": {
+                    "torque_T_Nm": 2000,
+                    "shaft_diameter_d_mm": 63,
+                    "outer_diameter_D_mm": 260,
+                    "hub_diameter_dm_mm": null,
+                    "total_length_L_mm": 175,
+                    "hub_length_l_mm": 140,
+                    "bolt_circle_diameter_d1_mm": 110,
+                    "bolt_position_diameter_D0_mm": 200,
+                    "number_of_pins_Z": 8,
+                    "max_speed_nmax_rpm": 2300,
+                    "width_B_mm": 8,
+                    "width_B1_mm": 70,
+                    "length_l1_mm": 48,
+                    "diameter_D3_mm": 48,
+                    "length_l2_mm": 48
+                }
+            },
+            {
+                "table_id": "3.2.1",
+                "table_name": "Bảng kích thước của vòng đàn hồi",
+                "description": "Chi tiết các kích thước hình học của vòng đàn hồi (chốt)",
+                "data": {
+                    "nominal_torque_T_Nm": 2000,
+                    "pin_diameter_dc_mm": 24,
+                    "thread_d1": "M16",
+                    "washer_diameter_D2_mm": 32,
+                    "total_pin_length_l_mm": 95,
+                    "length_l1_mm": 52,
+                    "length_l2_mm": 24,
+                    "length_l3_mm": 44,
+                    "height_h_mm": null
+                }
+            }
+        ],
+        "technical_notes": {
+            "null_values": "Giá trị '-' được đại diện bằng null, biểu thị thông số không áp dụng hoặc chưa xác định",
+            "thread_format": "d1 trong bảng 3.2.1 là ren hệ mét (M16)"
+        }
+    }
+{
+        "table_metadata": {
+            "table_id": "4.1",
+            "title": "Bảng thông số kích thước then",
+            "context": "Thiết kế và kiểm nghiệm mối ghép then trên các trục"
+        },
+        "data": [
+            {
+                "shaft_id": 1,
+                "sections": [
+                    {
+                        "section_name": "1A",
+                        "diameter": 25,
+                        "l_m": 47,
+                        "l_t": 40,
+                        "b_x_h": "8x7",
+                        "t1": 4,
+                        "torque_T": 47980.99,
+                        "sigma_d": 31.98,
+                        "tau_c": 11.99
+                    },
+                    {
+                        "section_name": "1D",
+                        "diameter": 25,
+                        "l_m": 45,
+                        "l_t": 36,
+                        "b_x_h": "8x7",
+                        "t1": 4,
+                        "torque_T": 47980.99,
+                        "sigma_d": 35.54,
+                        "tau_c": 13.33
+                    }
+                ]
+            },
+            {
+                "shaft_id": 2,
+                "sections": [
+                    {
+                        "section_name": "2B",
+                        "diameter": 50,
+                        "l_m": 70,
+                        "l_t": 56,
+                        "b_x_h": "14x9",
+                        "t1": 5.5,
+                        "torque_T": 210538.22,
+                        "sigma_d": 47.74,
+                        "tau_c": 11.94
+                    },
+                    {
+                        "section_name": "2C",
+                        "diameter": 50,
+                        "l_m": 60,
+                        "l_t": 50,
+                        "b_x_h": "14x9",
+                        "t1": 5.5,
+                        "torque_T": 210538.22,
+                        "sigma_d": 53.47,
+                        "tau_c": 13.37
+                    }
+                ]
+            },
+            {
+                "shaft_id": 3,
+                "sections": [
+                    {
+                        "section_name": "3B",
+                        "diameter": 70,
+                        "l_m": 90,
+                        "l_t": 80,
+                        "b_x_h": "20x12",
+                        "t1": 7.5,
+                        "torque_T": 761745.23,
+                        "sigma_d": 60.46,
+                        "tau_c": 13.6
+                    },
+                    {
+                        "section_name": "3D",
+                        "diameter": 65,
+                        "l_m": 100,
+                        "l_t": 80,
+                        "b_x_h": "18x11",
+                        "t1": 7,
+                        "torque_T": 761745.23,
+                        "sigma_d": 73.24,
+                        "tau_c": 16.28
+                    }
+                ]
+            }
+        ],
+        "technical_glossary": {
+            "l_m": "Chiều dài may-ơ (mm)",
+            "l_t": "Chiều dài tính toán của then (mm)",
+            "b_h": "Kích thước chiều rộng b và chiều cao h của then (mm)",
+            "t1": "Chiều sâu rãnh then trên trục (mm)",
+            "torque_T": "Momen xoắn trên trục (N.mm)",
+            "sigma_d": "Ứng suất dập cho phép (MPa hoặc N/mm2)",
+            "tau_c": "Ứng suất cắt cho phép (MPa hoặc N/mm2)"
+        }
+    }
+
+{
+        "document_info": {
+            "table_id": "4.2",
+            "title": "Bảng kiểm nghiệm độ bền mỏi của trục",
+        },
+        "shaft_fatigue_data": [
+            {
+                "shaft_id": 1,
+                "locations": [
+                    {
+                        "position": "1A",
+                        "key_dim_bxhxt1": "8x7x4",
+                        "Wj": 969.5,
+                        "Woj": 2503.48,
+                        "epsilon_sigma": 0.9,
+                        "epsilon_tau": 0.85,
+                        "sigma_a": 3.92,
+                        "tau_a_equal_tau_m": 9.58,
+                        "S_sigma": 59.79,
+                        "S_tau": 15.23,
+                        "S_total": 14.76
+                    },
+                    {
+                        "position": "1B",
+                        "key_dim_bxhxt1": null,
+                        "Wj": 1929.65,
+                        "Woj": 4580.37,
+                        "epsilon_sigma": 0.88,
+                        "epsilon_tau": 0.81,
+                        "sigma_a": 53.86,
+                        "tau_a_equal_tau_m": 5.23,
+                        "S_sigma": 4.34,
+                        "S_tau": 27.86,
+                        "S_total": 4.29
+                    },
+                    {
+                        "position": "1D",
+                        "key_dim_bxhxt1": "8x7x4",
+                        "Wj": null,
+                        "Woj": 2503.48,
+                        "epsilon_sigma": 0.9,
+                        "epsilon_tau": 0.85,
+                        "sigma_a": null,
+                        "tau_a_equal_tau_m": 9.58,
+                        "S_sigma": null,
+                        "S_tau": 15.23,
+                        "S_total": null
+                    }
+                ]
+            },
+            {
+                "shaft_id": 2,
+                "locations": [
+                    {
+                        "position": "2A",
+                        "key_dim_bxhxt1": null,
+                        "Wj": 3991.95,
+                        "Woj": 10275.14,
+                        "epsilon_sigma": 0.85,
+                        "epsilon_tau": 0.78,
+                        "sigma_a": null,
+                        "tau_a_equal_tau_m": null,
+                        "S_sigma": null,
+                        "S_tau": null,
+                        "S_total": null
+                    },
+                    {
+                        "position": "2B",
+                        "key_dim_bxhxt1": "14x9x5.5",
+                        "Wj": 9222.26,
+                        "Woj": 21494.1,
+                        "epsilon_sigma": 0.81,
+                        "epsilon_tau": 0.76,
+                        "sigma_a": 30.05,
+                        "tau_a_equal_tau_m": 10.25,
+                        "S_sigma": 7.77,
+                        "S_tau": 14.24,
+                        "S_total": 6.82
+                    },
+                    {
+                        "position": "2C",
+                        "key_dim_bxhxt1": "14x9x5.5",
+                        "Wj": 9222.26,
+                        "Woj": 21494.1,
+                        "epsilon_sigma": 0.81,
+                        "epsilon_tau": 0.76,
+                        "sigma_a": 27.49,
+                        "tau_a_equal_tau_m": 10.25,
+                        "S_sigma": 8.49,
+                        "S_tau": 14.24,
+                        "S_total": 7.29
+                    }
+                ]
+            },
+            {
+                "shaft_id": 3,
+                "locations": [
+                    {
+                        "position": "3A",
+                        "key_dim_bxhxt1": null,
+                        "Wj": 23638.17,
+                        "Woj": 10728.87,
+                        "epsilon_sigma": 0.7725,
+                        "epsilon_tau": 0.7375,
+                        "sigma_a": null,
+                        "tau_a_equal_tau_m": 7.53,
+                        "S_sigma": null,
+                        "S_tau": null,
+                        "S_total": null
+                    },
+                    {
+                        "position": "3B",
+                        "key_dim_bxhxt1": "20x12x7.5",
+                        "Wj": 25303.41,
+                        "Woj": 58977.35,
+                        "epsilon_sigma": 0.76,
+                        "epsilon_tau": 0.73,
+                        "sigma_a": 11.86,
+                        "tau_a_equal_tau_m": 6.46,
+                        "S_sigma": 19.7,
+                        "S_tau": 22.59,
+                        "S_total": 14.85
+                    },
+                    {
+                        "position": "3D",
+                        "key_dim_bxhxt1": "18x11x7",
+                        "Wj": 20440.26,
+                        "Woj": 47401.5,
+                        "epsilon_sigma": 0.745,
+                        "epsilon_tau": 0.72,
+                        "sigma_a": 0,
+                        "tau_a_equal_tau_m": 8.04,
+                        "S_sigma": null,
+                        "S_tau": null,
+                        "S_total": null
+                    }
+                ]
+            }
+        ],
+        "parameter_definitions": {
+            "Wj": "Momen cản uốn tiết diện trục",
+            "Woj": "Momen cản xoắn tiết diện trục",
+            "epsilon_sigma": "Hệ số kích thước tuyệt đối khi uốn",
+            "epsilon_tau": "Hệ số kích thước tuyệt đối khi xoắn",
+            "sigma_a": "Biên độ ứng suất pháp",
+            "tau_a": "Biên độ ứng suất tiếp",
+            "S_sigma": "Hệ số an toàn chỉ xét ứng suất pháp",
+            "S_tau": "Hệ số an toàn chỉ xét ứng suất tiếp",
+            "S": "Hệ số an toàn tổng hợp"
+        }
+    }
+
+{
+        "table_metadata": {
+            "table_id": "4.3",
+            "title": "Bảng kiểm nghiệm độ bền tĩnh của trục",
+            "objective": "Kiểm tra khả năng chịu tải trọng cực đại (tĩnh) để tránh biến dạng dẻo"
+        },
+        "static_strength_data": [
+            {
+                "shaft_id": 1,
+                "diameter_d_mm": 30,
+                "max_bending_moment_Mmax_Nmm": 103924.81,
+                "max_torque_Tmax_Nmm": 47980.99,
+                "bending_stress_sigma_MPa": 38.49,
+                "shear_stress_tau_MPa": 8.88,
+                "equivalent_stress_sigma_td_MPa": 41.45
+            },
+            {
+                "shaft_id": 2,
+                "diameter_d_mm": 50,
+                "max_bending_moment_Mmax_Nmm": 277147.89,
+                "max_torque_Tmax_Nmm": 210538.22,
+                "bending_stress_sigma_MPa": 22.17,
+                "shear_stress_tau_MPa": 8.42,
+                "equivalent_stress_sigma_td_MPa": 26.54
+            },
+            {
+                "shaft_id": 3,
+                "diameter_d_mm": 70,
+                "max_bending_moment_Mmax_Nmm": 300034.83,
+                "max_torque_Tmax_Nmm": 761745.23,
+                "bending_stress_sigma_MPa": 8.75,
+                "shear_stress_tau_MPa": 11.1,
+                "equivalent_stress_sigma_td_MPa": 21.13
+            }
+        ],
+        "formula_reference": {
+            "sigma_td": "sqrt(sigma^2 + 3*tau^2) hoặc sqrt(sigma^2 + 4*tau^2)",
+            "units": {
+                "moment": "N.mm",
+                "stress": "MPa (N/mm^2)",
+                "diameter": "mm"
+            }
+        }
+    }
+{
+        "project_component": "Hệ thống ổ lăn (Bearings)",
+        "bearing_tables": [
+            {
+                "table_id": "5.1",
+                "shaft_id": 1,
+                "title": "Bảng thông số kích thước ổ trục 1",
+                "bearing_data": {
+                    "bearing_type_code": "7306",
+                    "bore_diameter_d_mm": 30,
+                    "outer_diameter_D_mm": 72,
+                    "width_B_mm": 19,
+                    "dynamic_load_rating_C_kN": 40.0,
+                    "static_load_rating_C0_kN": 29.9
+                }
+            },
+            {
+                "table_id": "5.2",
+                "shaft_id": 2,
+                "title": "Bảng thông số kích thước ổ trục 2",
+                "bearing_data": {
+                    "bearing_type_code": "7208",
+                    "bore_diameter_d_mm": 40,
+                    "outer_diameter_D_mm": 80,
+                    "width_B_mm": 18,
+                    "dynamic_load_rating_C_kN": 42.4,
+                    "static_load_rating_C0_kN": 32.7
+                }
+            },
+            {
+                "table_id": "5.3",
+                "shaft_id": 3,
+                "title": "Bảng thông số kích thước ổ trục 3",
+                "bearing_data": {
+                    "bearing_type_code": "213",
+                    "bore_diameter_d_mm": 65,
+                    "outer_diameter_D_mm": 120,
+                    "width_B_mm": 23,
+                    "dynamic_load_rating_C_kN": 44.9,
+                    "static_load_rating_C0_kN": 34.7
+                }
+            }
+        ],
+        "technical_vocabulary": {
+            "d": "Đường kính trong của ổ (bore diameter)",
+            "D": "Đường kính ngoài của ổ (outside diameter)",
+            "B": "Chiều rộng ổ (width)",
+            "C": "Khả năng tải động định mức",
+            "C0": "Khả năng tải tĩnh định mức"
+        }
+    }
+{
+        "project_component": "Hệ thống ổ lăn (Bearings)",
+        "bearing_tables": [
+            {
+                "table_id": "5.1",
+                "shaft_id": 1,
+                "title": "Bảng thông số kích thước ổ trục 1",
+                "bearing_data": {
+                    "bearing_type_code": "7306",
+                    "bore_diameter_d_mm": 30,
+                    "outer_diameter_D_mm": 72,
+                    "width_B_mm": 19,
+                    "dynamic_load_rating_C_kN": 40.0,
+                    "static_load_rating_C0_kN": 29.9
+                }
+            },
+            {
+                "table_id": "5.2",
+                "shaft_id": 2,
+                "title": "Bảng thông số kích thước ổ trục 2",
+                "bearing_data": {
+                    "bearing_type_code": "7208",
+                    "bore_diameter_d_mm": 40,
+                    "outer_diameter_D_mm": 80,
+                    "width_B_mm": 18,
+                    "dynamic_load_rating_C_kN": 42.4,
+                    "static_load_rating_C0_kN": 32.7
+                }
+            },
+            {
+                "table_id": "5.3",
+                "shaft_id": 3,
+                "title": "Bảng thông số kích thước ổ trục 3",
+                "bearing_data": {
+                    "bearing_type_code": "213",
+                    "bore_diameter_d_mm": 65,
+                    "outer_diameter_D_mm": 120,
+                    "width_B_mm": 23,
+                    "dynamic_load_rating_C_kN": 44.9,
+                    "static_load_rating_C0_kN": 34.7
+                }
+            }
+        ],
+        "technical_vocabulary": {
+            "d": "Đường kính trong của ổ (bore diameter)",
+            "D": "Đường kính ngoài của ổ (outside diameter)",
+            "B": "Chiều rộng ổ (width)",
+            "C": "Khả năng tải động định mức",
+            "C0": "Khả năng tải tĩnh định mức"
+        }
+    }
+{
+        "project_context": {
+            "title": "Thiết kế vỏ hộp giảm tốc và gối trục",
+            "unit_system": "Metric (mm, N, kN)"
+        },
+        "gearbox_housing_design": {
+            "table_id": "6.1",
+            "title": "Bảng kích thước vỏ hộp giảm tốc",
+            "parameters": {
+                "wall_thickness": {
+                    "housing_body_delta": 10,
+                    "housing_cover_delta1": 9
+                },
+                "stiffening_ribs": {
+                    "thickness_e": 10,
+                    "height_h": 55,
+                    "slope": "2 degrees"
+                },
+                "bolt_diameters": {
+                    "foundation_bolts_d1": 19,
+                    "bearing_cap_bolts_d2": 14,
+                    "housing_flange_bolts_d3": 12,
+                    "bearing_cover_screws_d4": 9,
+                    "inspection_cover_screws_d5": 8
+                },
+                "flange_thickness": {
+                    "housing_body_flange_S3": 18,
+                    "housing_cover_flange_S4": 18,
+                    "clearance_K2": 47
+                },
+                "foundation_base": {
+                    "thickness_S1": 25,
+                    "width_K1": 57,
+                    "total_width_q": 77
+                },
+                "internal_clearances": {
+                    "gear_to_inner_wall": 10,
+                    "large_gear_to_bottom": 30,
+                    "between_gears": 10
+                },
+                "foundation_bolt_quantity": {
+                    "total_Z": 6,
+                    "L_length": 735,
+                    "B_width": 350
+                }
+            }
+        },
+        "bearing_supports": {
+            "table_id": "6.2",
+            "title": "Bảng kích thước gối trục",
+            "data": [
+                {
+                    "shaft_id": 1,
+                    "D_outer_diameter": 72,
+                    "D2_fitting_diameter": 90,
+                    "D3_cover_diameter": 115
+                },
+                {
+                    "shaft_id": 2,
+                    "D_outer_diameter": 80,
+                    "D2_fitting_diameter": 100,
+                    "D3_cover_diameter": 125
+                },
+                {
+                    "shaft_id": 3,
+                    "D_outer_diameter": 120,
+                    "D2_fitting_diameter": 140,
+                    "D3_cover_diameter": 170
+                }
+            ]
+        },
+        "technical_glossary": {
+            "delta": "Chiều dày thân hộp, tính dựa trên khoảng cách trục a",
+            "S3_S4": "Chiều dày bích ghép nắp và thân hộp",
+            "D2": "Đường kính ngoài của phần lắp ổ lăn trên gối trục",
+            "D3": "Đường kính ngoài của nắp ổ lăn"
+        }
+    }
+{
+        "ancillary_components": {
+            "locating_pins": {
+                "table_id": "6.3",
+                "title": "Bảng kích thước chốt định vị",
+                "data": {
+                    "diameter_d_mm": 6,
+                    "chamfer_c_mm": 1,
+                    "length_l_mm": 45
+                }
+            },
+            "bearing_covers": {
+                "table_id": "6.4_top",
+                "title": "Bảng kích thước nắp ổ trong hộp giảm tốc",
+                "data": [
+                    {
+                        "shaft_id": 1,
+                        "outer_diameter_D_mm": 72,
+                        "fitting_diameter_D2_mm": 90,
+                        "flange_diameter_D3_mm": 115,
+                        "thickness_h_mm": 10,
+                        "screw_size_d4": "M8",
+                        "screw_quantity_z": 4
+                    },
+                    {
+                        "shaft_id": 2,
+                        "outer_diameter_D_mm": 80,
+                        "fitting_diameter_D2_mm": 100,
+                        "flange_diameter_D3_mm": 125,
+                        "thickness_h_mm": 10,
+                        "screw_size_d4": "M8",
+                        "screw_quantity_z": 4
+                    },
+                    {
+                        "shaft_id": 3,
+                        "outer_diameter_D_mm": 120,
+                        "fitting_diameter_D2_mm": 140,
+                        "flange_diameter_D3_mm": 170,
+                        "thickness_h_mm": 14,
+                        "screw_size_d4": "M10",
+                        "screw_quantity_z": 6
+                    }
+                ]
+            },
+            "inspection_cover": {
+                "table_id": "6.4_bottom",
+                "title": "Kích thước cửa thăm",
+                "data": {
+                    "inner_length_A_mm": 100,
+                    "inner_width_B_mm": 75,
+                    "outer_length_A1_mm": 150,
+                    "outer_width_B1_mm": 140,
+                    "bolt_center_distance_C_mm": 125,
+                    "bolt_center_distance_C1_mm": null,
+                    "flange_width_K_mm": 87,
+                    "radius_R_mm": 12,
+                    "screw_size": "M8x22",
+                    "screw_quantity": 4
+                }
+            }
+        },
+        "technical_notes": {
+            "locating_pin_purpose": "Dùng để định vị chính xác vị trí nắp hộp và thân hộp trước khi xiết bulông.",
+            "bearing_cover_consistency": "Các thông số D, D2, D3 khớp hoàn toàn với Bảng 6.2 về kích thước gối trục.",
+            "inspection_cover_note": "Giá trị C1 để trống (null) do cửa thăm có dạng hình chữ nhật hoặc kích thước đối xứng đã được xác định qua C."
+        }
+    }
+{
+        "gearbox_accessories": {
+            "ventilation_and_lubrication": {
+                "vent_plug": {
+                    "table_id": "6.5",
+                    "title": "Bảng kích thước nút thông hơi",
+                    "main_spec": "M27x2",
+                    "dimensions": {
+                        "A": "M27x2",
+                        "B": 15,
+                        "C": 30,
+                        "D": 15,
+                        "E": 45,
+                        "G": 36,
+                        "H": 32,
+                        "I": 6,
+                        "K": 4,
+                        "L": 10,
+                        "M": 8,
+                        "N": 22,
+                        "O": 6,
+                        "P": 32,
+                        "Q": 18,
+                        "R": 36,
+                        "S": 32
+                    }
+                },
+                "oil_drain_plug": {
+                    "table_id": "6.6",
+                    "title": "Bảng kích thước nút tháo dầu",
+                    "main_spec": "M16x1.5",
+                    "dimensions": {
+                        "diameter_d": "M16x1.5",
+                        "flange_thickness_b": 12,
+                        "plug_height_m": 8,
+                        "fillet_f": 3,
+                        "length_l": 23,
+                        "chamfer_c": 2,
+                        "undercut_q": 13.8,
+                        "cap_diameter_D": 36,
+                        "hex_width_S": 17,
+                        "gasket_diameter_D0": 19.6
+                    }
+                }
+            },
+            "sealing_components": {
+                "oil_seals": {
+                    "table_id": "6.8",
+                    "title": "Bảng kích thước vòng phớt",
+                    "data": [
+                        {
+                            "location": "Trục 1",
+                            "shaft_diameter_d": 30,
+                            "d1": 31,
+                            "d2": 29,
+                            "outer_diameter_D": 43,
+                            "width_a": 6,
+                            "lip_width_b": 4.3,
+                            "total_width_S0": 9
+                        },
+                        {
+                            "location": "Trục 2",
+                            "shaft_diameter_d": 40,
+                            "d1": 41,
+                            "d2": 39,
+                            "outer_diameter_D": 59,
+                            "width_a": 9,
+                            "lip_width_b": 6.5,
+                            "total_width_S0": 12
+                        },
+                        {
+                            "location": "Trục 3",
+                            "shaft_diameter_d": 65,
+                            "d1": 66.5,
+                            "d2": 64,
+                            "outer_diameter_D": 84,
+                            "width_a": 9,
+                            "lip_width_b": 6.5,
+                            "total_width_S0": 12
+                        }
+                    ]
+                }
+            }
+        },
+        "assembly_logic_check": {
+            "oil_seal_consistency": "Đường kính d của vòng phớt khớp chính xác với đường kính ngõng trục lắp ổ lăn (30, 40, 65 mm).",
+            "ventilation_note": "Nút thông hơi M27x2 là kích thước lớn, phù hợp để thoát nhiệt và cân bằng áp suất cho hộp giảm tốc công suất trung bình."
+        }
+    }
+{
+        "assembly_and_specifications": {
+            "fitting_tolerances": {
+                "table_id": "6.9",
+                "title": "Bảng chọn các kiểu lắp cho các mối ghép",
+                "data": [
+                    {
+                        "component_assembly": "Vòng trong ổ lăn với trục",
+                        "tolerance_symbol": "k6"
+                    },
+                    {
+                        "component_assembly": "Vòng ngoài ổ lăn với vỏ hộp",
+                        "tolerance_symbol": "H7"
+                    },
+                    {
+                        "component_assembly": "Bánh răng (Bánh đai) với trục",
+                        "tolerance_symbol": "H7/k6"
+                    },
+                    {
+                        "component_assembly": "Then với trục",
+                        "tolerance_symbol": "P9/h9"
+                    },
+                    {
+                        "component_assembly": "Nắp ổ với vỏ hộp",
+                        "tolerance_symbol": "H7/d11"
+                    }
+                ]
+            },
+            "technical_summary": {
+                "table_id": "6.10",
+                "title": "Bảng tổng kết các thông số kĩ thuật",
+                "shafts": [
+                    {
+                        "shaft_id": "I",
+                        "power_P_kW": 5.872,
+                        "torque_T_Nmm": 47980.997,
+                        "speed_n_rpm": 1168.8,
+                        "transmission_ratio_u": 2.5
+                    },
+                    {
+                        "shaft_id": "II",
+                        "power_P_kW": 5.726,
+                        "torque_T_Nmm": 210538.217,
+                        "speed_n_rpm": 259.7,
+                        "transmission_ratio_u": 4.5
+                    },
+                    {
+                        "shaft_id": "III",
+                        "power_P_kW": 5.583,
+                        "torque_T_Nmm": 761745.234,
+                        "speed_n_rpm": 69.9,
+                        "transmission_ratio_u": 3.7104
+                    }
+                ],
+                "total_transmission_ratio_ut": 41.742
+            }
+        },
+        "technical_notes": {
+            "tolerance_logic": "Các kiểu lắp k6 và H7 là tiêu chuẩn cho ổ lăn để đảm bảo độ chặt vừa đủ và khả năng tháo lắp.",
+            "consistency_check": "Số liệu tại bảng 6.10 khớp hoàn toàn với bảng số liệu động học 2.2 đã trích xuất trước đó, xác nhận tính nhất quán của báo cáo."
+        }
+    }
