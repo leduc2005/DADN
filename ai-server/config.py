@@ -52,3 +52,20 @@ CHUNK_SIZE = int(
 CHUNK_OVERLAP = int(
     os.getenv("CHUNK_OVERLAP", 150)
 )
+
+
+
+LLM_MODEL = os.getenv(
+    "LLM_MODEL",
+    "gemini-2.5-flash"
+)
+
+
+
+LLM_TEMPERATURE = float(
+    os.getenv("LLM_TEMPERATURE", 0)
+)
+
+
+
+
