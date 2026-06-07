@@ -85,7 +85,7 @@ def _get_reranker_model():
 def _retrieve_and_rerank(question: str, base_retriever, top_n: int = 5) -> list:
     docs = base_retriever.invoke(question)
     print(f"[DEBUG]")   
-    with open("debug_docs.txt", "w") as f:
+    with open("debug_docs.txt", "w", encoding="utf-8") as f:
         for i, d in enumerate(docs): f.write(f"  [{i}] {d.page_content}\n")  
     if len(docs) <= top_n:
         return docs

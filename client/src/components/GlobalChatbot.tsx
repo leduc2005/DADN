@@ -20,6 +20,9 @@ import {
   Keyboard,
 } from 'react-native';
 
+import EventSource from 'react-native-sse';
+import { WebView } from 'react-native-webview';
+
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHAT_PANEL_HEIGHT = SCREEN_HEIGHT * 0.65;
 
@@ -44,6 +47,88 @@ const WELCOME_MESSAGE: Message = {
   text: 'Chào bạn! 👋 Mình là Trợ lý AI Đồ Án.\n\nBạn có thể hỏi mình về công thức, thông số trong sách Cơ sở thiết kế máy nhé!',
   isUser: false,
   timestamp: new Date(),
+};
+
+// ── Component hiển thị AI bằng WebView để Render Toán học ──
+const AIMessageWebView = ({ text }: { text: string }) => {
+  const [webViewHeight, setWebViewHeight] = useState(80);
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <style>
+            body {
+                font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                font-size: 14.5px;
+                color: #1f2937;
+                padding: 0;
+                margin: 0;
+                word-wrap: break-word;
+                background-color: transparent;
+            }
+            p { margin-top: 0; margin-bottom: 8px; }
+            .katex { font-size: 1.1em; }
+            img { max-width: 100%; height: auto; }
+            pre { background-color: #f3f4f6; padding: 10px; border-radius: 6px; overflow-x: auto; }
+            code { font-family: monospace; }
+        </style>
+    </head>
+    <body>
+        <div id="content"></div>
+        <script>
+            const rawText = ${JSON.stringify(text)};
+            document.getElementById('content').innerHTML = marked.parse(rawText);
+            
+            renderMathInElement(document.body, {
+              delimiters: [
+                  {left: '$$', right: '$$', display: true},
+                  {left: '$', right: '$', display: false},
+                  {left: '\\\\(', right: '\\\\)', display: false},
+                  {left: '\\\\[', right: '\\\\]', display: true}
+              ],
+              throwOnError: false
+            });
+            
+            // Notify React Native about the content height
+            setTimeout(() => {
+                const height = document.body.scrollHeight;
+                window.ReactNativeWebView.postMessage(height.toString());
+            }, 300);
+            
+            // Re-check after 1s just in case fonts loaded slowly
+            setTimeout(() => {
+                const height = document.body.scrollHeight;
+                window.ReactNativeWebView.postMessage(height.toString());
+            }, 1000);
+        </script>
+    </body>
+    </html>
+  `;
+
+  return (
+    <View style={{ width: SCREEN_WIDTH * 0.65, height: webViewHeight, minHeight: 40 }}>
+      <WebView
+        source={{ html: htmlContent }}
+        style={{ width: '100%', height: webViewHeight, backgroundColor: 'transparent' }}
+        scrollEnabled={false}
+        originWhitelist={['*']}
+        onMessage={(event) => {
+          const height = parseInt(event.nativeEvent.data);
+          if (!isNaN(height) && height > 0) {
+            setWebViewHeight(height + 15); // Padding
+          }
+        }}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+      />
+    </View>
+  );
 };
 
 export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
@@ -112,33 +197,70 @@ export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
       isUser: true,
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, userMsg]);
+    
+    // Tạo sẵn một bong bóng AI rỗng để hứng dữ liệu
+    const aiMsgId = (Date.now() + 1).toString();
+    const aiMsg: Message = {
+      id: aiMsgId,
+      text: '',
+      isUser: false,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, userMsg, aiMsg]);
     setInputText('');
     Keyboard.dismiss();
 
     // 2. Bật trạng thái chờ (3 dấu chấm nhấp nháy)
     setIsTyping(true);
 
-    // ================================================================
-    // ⚠️  PLACEHOLDER – CHỜ BACKEND TEAM THAY THẾ
-    // ================================================================
-    // Ví dụ:
-    //   const res = await axios.post(`${API_URL}/api/chat`, { question: trimmed });
-    //   const answer = res.data.answer;   // chuỗi text từ Gemini
-    //   setMessages(prev => [...prev, { id: ..., text: answer, isUser: false, ... }]);
-    //   setIsTyping(false);
-    // ================================================================
-    setTimeout(() => {
+    // 3. Gọi API bằng Server-Sent Events (SSE)
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.123.10:8000';
+    
+    const es = new EventSource(`${apiUrl}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ question: trimmed }),
+    });
+
+    es.addEventListener('message', (event: any) => {
+      setIsTyping(false); // Có data về là tắt Typing Indicator
+
+      if (event.data === '[DONE]') {
+        es.close();
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(event.data);
+        if (parsed.text) {
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === aiMsgId ? { ...msg, text: msg.text + parsed.text } : msg
+            )
+          );
+        }
+      } catch (e) {
+        console.error('SSE JSON Parse error:', e);
+      }
+    });
+
+    es.addEventListener('error', (error: any) => {
+      console.error('SSE Error:', error);
       setIsTyping(false);
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        text: '⏳ Tính năng Chatbot AI đang được phát triển bởi team Backend.\n\nKhi hoàn tất, câu trả lời từ hệ thống RAG (bao gồm công thức dạng $\\sigma_H \\le [\\sigma_H]$) sẽ hiển thị tại đây.',
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, aiMsg]);
-    }, 2500);
-    // ================================================================
+      es.close();
+      
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === aiMsgId && msg.text === ''
+            ? { ...msg, text: '❌ Lỗi kết nối tới Server RAG. Hãy chắc chắn Server đang chạy và bạn cấu hình đúng IP.' } 
+            : msg
+        )
+      );
+    });
+
   }, [inputText, isTyping]);
 
   // Tự cuộn xuống cuối khi có tin nhắn mới
@@ -148,27 +270,7 @@ export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
     }
   }, [messages.length]);
 
-  // ── Render text kèm highlight công thức ($...$) ──
-  const renderFormattedText = (text: string, isUser: boolean) => {
-    const parts = text.split(/(\$[^$]+\$)/g);
-    return parts.map((part, idx) => {
-      if (part.startsWith('$') && part.endsWith('$')) {
-        const formula = part.slice(1, -1);
-        return (
-          <Text
-            key={idx}
-            style={[
-              styles.mathFormula,
-              isUser ? styles.mathFormulaUser : styles.mathFormulaAI,
-            ]}
-          >
-            {formula}
-          </Text>
-        );
-      }
-      return <Text key={idx}>{part}</Text>;
-    });
-  };
+
 
   // ── Render từng bong bóng ──
   const renderMessage = ({ item }: { item: Message }) => (
@@ -182,11 +284,16 @@ export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
         style={[
           styles.bubble,
           item.isUser ? styles.bubbleUser : styles.bubbleAI,
+          !item.isUser && { paddingHorizontal: 0, paddingVertical: 0, backgroundColor: 'transparent' }
         ]}
       >
-        <Text style={[styles.bubbleText, item.isUser ? styles.bubbleTextUser : styles.bubbleTextAI]}>
-          {renderFormattedText(item.text, item.isUser)}
-        </Text>
+        {item.isUser ? (
+          <Text style={[styles.bubbleText, styles.bubbleTextUser]}>
+            {item.text}
+          </Text>
+        ) : (
+          <AIMessageWebView text={item.text} />
+        )}
       </View>
     </View>
   );

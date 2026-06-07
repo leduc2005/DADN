@@ -13,6 +13,7 @@ __pycache__/
 ai-server/venv/
 
 # Generated / debug output
+ai-server/debug_docs.txt
 ai-server/rag/debug_docs.txt
 ai-server/rag/output.txt
 ai-server/preprocessing/output/
