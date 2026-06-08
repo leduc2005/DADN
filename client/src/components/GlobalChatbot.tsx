@@ -15,7 +15,6 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-  KeyboardAvoidingView,
   Platform,
   Keyboard,
 } from 'react-native';
@@ -49,79 +48,145 @@ const WELCOME_MESSAGE: Message = {
   timestamp: new Date(),
 };
 
-// ── Component hiển thị AI bằng WebView để Render Toán học ──
-const AIMessageWebView = ({ text }: { text: string }) => {
-  const [webViewHeight, setWebViewHeight] = useState(80);
+// ── Hàm tạo HTML với KaTeX + Marked ──
+// Dùng window.onload để đảm bảo tất cả script CDN tải xong trước khi render
+function buildMathHTML(text: string): string {
+  // Escape cho JSON.stringify bên trong template
+  const escapedText = JSON.stringify(text);
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-        <style>
-            body {
-                font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                font-size: 14.5px;
-                color: #1f2937;
-                padding: 0;
-                margin: 0;
-                word-wrap: break-word;
-                background-color: transparent;
-            }
-            p { margin-top: 0; margin-bottom: 8px; }
-            .katex { font-size: 1.1em; }
-            img { max-width: 100%; height: auto; }
-            pre { background-color: #f3f4f6; padding: 10px; border-radius: 6px; overflow-x: auto; }
-            code { font-family: monospace; }
-        </style>
-    </head>
-    <body>
-        <div id="content"></div>
-        <script>
-            const rawText = ${JSON.stringify(text)};
-            document.getElementById('content').innerHTML = marked.parse(rawText);
-            
-            renderMathInElement(document.body, {
-              delimiters: [
-                  {left: '$$', right: '$$', display: true},
-                  {left: '$', right: '$', display: false},
-                  {left: '\\\\(', right: '\\\\)', display: false},
-                  {left: '\\\\[', right: '\\\\]', display: true}
-              ],
-              throwOnError: false
-            });
-            
-            // Notify React Native about the content height
-            setTimeout(() => {
-                const height = document.body.scrollHeight;
-                window.ReactNativeWebView.postMessage(height.toString());
-            }, 300);
-            
-            // Re-check after 1s just in case fonts loaded slowly
-            setTimeout(() => {
-                const height = document.body.scrollHeight;
-                window.ReactNativeWebView.postMessage(height.toString());
-            }, 1000);
-        </script>
-    </body>
-    </html>
-  `;
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1f2937;
+      padding: 10px 12px;
+      background-color: #f3f4f6;
+      border-radius: 16px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    p { margin-bottom: 8px; }
+    p:last-child { margin-bottom: 0; }
+    ul, ol { padding-left: 20px; margin-bottom: 8px; }
+    li { margin-bottom: 4px; }
+    .katex { font-size: 1.05em; }
+    .katex-display { margin: 10px 0; overflow-x: auto; overflow-y: hidden; }
+    pre { background: #e5e7eb; padding: 8px; border-radius: 6px; overflow-x: auto; margin: 8px 0; }
+    code { font-family: monospace; font-size: 13px; }
+    strong { font-weight: 700; }
+    h1,h2,h3,h4 { margin: 10px 0 6px; font-weight: 700; }
+    h1 { font-size: 18px; } h2 { font-size: 16px; } h3 { font-size: 15px; }
+    blockquote { border-left: 3px solid #6366f1; padding-left: 10px; color: #4b5563; margin: 8px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+    th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; font-size: 13px; }
+    th { background: #e5e7eb; font-weight: 600; }
+    a { color: #6366f1; }
+    .loading { color: #9ca3af; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div id="content"><p class="loading">Đang tải...</p></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script>
+    // Đợi tất cả script tải xong
+    window.onload = function() {
+      try {
+        var rawText = ${escapedText};
+        
+        // Bảo vệ các block math $$ ... $$ trước khi Marked xử lý
+        var mathBlocks = [];
+        var idx = 0;
+        
+        // Bảo vệ block math $$...$$
+        rawText = rawText.replace(/\\$\\$([\\s\\S]*?)\\$\\$/g, function(m) {
+          var key = '@@MATH_BLOCK_' + idx + '@@';
+          mathBlocks.push({ key: key, val: m });
+          idx++;
+          return key;
+        });
+        
+        // Bảo vệ inline math $...$
+        rawText = rawText.replace(/\\$([^\\$\\n]+?)\\$/g, function(m) {
+          var key = '@@MATH_INLINE_' + idx + '@@';
+          mathBlocks.push({ key: key, val: m });
+          idx++;
+          return key;
+        });
+        
+        // Parse Markdown
+        var html = marked.parse(rawText);
+        
+        // Khôi phục các công thức
+        for (var i = 0; i < mathBlocks.length; i++) {
+          html = html.split(mathBlocks[i].key).join(mathBlocks[i].val);
+        }
+        
+        document.getElementById('content').innerHTML = html;
+
+        // Render KaTeX
+        if (typeof renderMathInElement === 'function') {
+          renderMathInElement(document.body, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '$', right: '$', display: false },
+              { left: '\\\\(', right: '\\\\)', display: false },
+              { left: '\\\\[', right: '\\\\]', display: true }
+            ],
+            throwOnError: false
+          });
+        }
+      } catch(e) {
+        document.getElementById('content').innerHTML = ${escapedText}.replace(/\\n/g, '<br/>');
+      }
+      
+      // Gửi chiều cao về React Native
+      function sendHeight() {
+        var h = document.body.scrollHeight;
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', value: h }));
+      }
+      sendHeight();
+      setTimeout(sendHeight, 500);
+      setTimeout(sendHeight, 1500);
+    };
+  </script>
+</body>
+</html>`;
+}
+
+// ── Component hiển thị AI bằng WebView để Render Toán học ──
+const AIMessageWebView = React.memo(({ text }: { text: string }) => {
+  const [webViewHeight, setWebViewHeight] = useState(60);
+  const htmlContent = buildMathHTML(text);
 
   return (
-    <View style={{ width: SCREEN_WIDTH * 0.65, height: webViewHeight, minHeight: 40 }}>
+    <View style={{ width: SCREEN_WIDTH * 0.72, height: webViewHeight, minHeight: 50 }}>
       <WebView
         source={{ html: htmlContent }}
-        style={{ width: '100%', height: webViewHeight, backgroundColor: 'transparent' }}
+        style={{ width: '100%', height: webViewHeight, backgroundColor: 'transparent', opacity: 0.99 }}
         scrollEnabled={false}
         originWhitelist={['*']}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        mixedContentMode="always"
         onMessage={(event) => {
-          const height = parseInt(event.nativeEvent.data);
-          if (!isNaN(height) && height > 0) {
-            setWebViewHeight(height + 15); // Padding
+          try {
+            const data = JSON.parse(event.nativeEvent.data);
+            if (data.type === 'height' && data.value > 0) {
+              setWebViewHeight(data.value + 10);
+            }
+          } catch (e) {
+            const h = parseInt(event.nativeEvent.data);
+            if (!isNaN(h) && h > 0) setWebViewHeight(h + 10);
           }
         }}
         showsVerticalScrollIndicator={false}
@@ -129,7 +194,7 @@ const AIMessageWebView = ({ text }: { text: string }) => {
       />
     </View>
   );
-};
+});
 
 export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
   // ── State ──
@@ -137,6 +202,7 @@ export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // ── Animation refs ──
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -146,6 +212,24 @@ export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
 
   // Ẩn trên màn hình Auth
   const isVisible = !AUTH_SCREENS.includes(currentRoute);
+
+  // ── Keyboard listeners ──
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // ── Typing dots animation ──
   useEffect(() => {
@@ -263,14 +347,12 @@ export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
 
   }, [inputText, isTyping]);
 
-  // Tự cuộn xuống cuối khi có tin nhắn mới
+  // Tự cuộn xuống cuối khi có tin nhắn mới hoặc khi mở bàn phím
   useEffect(() => {
     if (messages.length > 1) {
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 150);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 200);
     }
-  }, [messages.length]);
-
-
+  }, [messages.length, keyboardHeight]);
 
   // ── Render từng bong bóng ──
   const renderMessage = ({ item }: { item: Message }) => (
@@ -284,12 +366,15 @@ export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
         style={[
           styles.bubble,
           item.isUser ? styles.bubbleUser : styles.bubbleAI,
-          !item.isUser && { paddingHorizontal: 0, paddingVertical: 0, backgroundColor: 'transparent' }
         ]}
       >
         {item.isUser ? (
           <Text style={[styles.bubbleText, styles.bubbleTextUser]}>
             {item.text}
+          </Text>
+        ) : item.text === '' ? (
+          <Text style={[styles.bubbleText, styles.bubbleTextAI, { fontStyle: 'italic', color: '#9ca3af' }]}>
+            ...
           </Text>
         ) : (
           <AIMessageWebView text={item.text} />
@@ -317,7 +402,14 @@ export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
 
       {/* ── KHUNG CHAT ── */}
       <Animated.View
-        style={[styles.chatPanel, { transform: [{ translateY: panelTranslateY }] }]}
+        style={[
+          styles.chatPanel,
+          {
+            transform: [{ translateY: panelTranslateY }],
+            // Đẩy panel lên khi bàn phím mở
+            bottom: keyboardHeight > 0 ? keyboardHeight : 0,
+          }
+        ]}
         pointerEvents={isOpen ? 'auto' : 'none'}
       >
         {/* Header */}
@@ -364,30 +456,28 @@ export default function GlobalChatbot({ currentRoute }: GlobalChatbotProps) {
         )}
 
         {/* Thanh nhập liệu */}
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.inputBar}>
-            <TextInput
-              style={styles.input}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="Hỏi về công thức, thông số..."
-              placeholderTextColor="#9ca3af"
-              multiline
-              maxLength={500}
-              returnKeyType="send"
-              onSubmitEditing={handleSend}
-              blurOnSubmit
-            />
-            <TouchableOpacity
-              style={[styles.sendBtn, (!inputText.trim() || isTyping) && styles.sendBtnDisabled]}
-              onPress={handleSend}
-              disabled={!inputText.trim() || isTyping}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.sendBtnIcon}>➤</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+        <View style={styles.inputBar}>
+          <TextInput
+            style={styles.input}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Hỏi về công thức, thông số..."
+            placeholderTextColor="#9ca3af"
+            multiline
+            maxLength={500}
+            returnKeyType="send"
+            onSubmitEditing={handleSend}
+            blurOnSubmit
+          />
+          <TouchableOpacity
+            style={[styles.sendBtn, (!inputText.trim() || isTyping) && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            disabled={!inputText.trim() || isTyping}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.sendBtnIcon}>➤</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     </>
   );
@@ -537,18 +627,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   bubble: {
-    maxWidth: SCREEN_WIDTH * 0.68,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    maxWidth: SCREEN_WIDTH * 0.75,
     borderRadius: 18,
   },
   bubbleUser: {
     backgroundColor: '#6366f1',
     borderBottomRightRadius: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   bubbleAI: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'transparent',
     borderBottomLeftRadius: 4,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   bubbleText: {
     fontSize: 14.5,
@@ -559,25 +651,6 @@ const styles = StyleSheet.create({
   },
   bubbleTextAI: {
     color: '#1f2937',
-  },
-
-  // ── Math Formula Highlight ──
-  mathFormula: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontWeight: '600',
-    fontSize: 13.5,
-  },
-  mathFormulaUser: {
-    color: '#e0e7ff',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 4,
-    borderRadius: 4,
-  },
-  mathFormulaAI: {
-    color: '#4f46e5',
-    backgroundColor: '#ede9fe',
-    paddingHorizontal: 4,
-    borderRadius: 4,
   },
 
   // ── Typing Indicator ──
