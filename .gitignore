@@ -3,3 +3,18 @@ node_modules/
 .DS_Store
 client/android/build/
 client/ios/build/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+ai-server/venv/
+
+# Generated / debug output
+ai-server/debug_docs.txt
+ai-server/rag/debug_docs.txt
+ai-server/rag/output.txt
+ai-server/preprocessing/output/
+ai-server/preprocessing/source/
